@@ -15,7 +15,7 @@ plot_V <- function(Km, Vmax) {
   S <- seq(0, 1000, by = 1)  # Crear una secuencia de concentraciones de sustrato
   V_values <- V(S, Km, Vmax)  # Calcular la velocidad para cada valor de S
   
-  # Crear el gráfico usando ggplot2
+# Crear el gráfico usando ggplot2
   ggplot(data = data.frame(S = S, V = V_values), aes(x = S, y = V)) +
     geom_line(color = "red") +
     ylim(0, 100) +
