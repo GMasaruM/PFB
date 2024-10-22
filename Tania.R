@@ -4,6 +4,7 @@
 # Cargar librerías necesarias
 library(ggplot2)
 
+
 # Datos de tiempo (minutos)
 tiempo <- c(0, 30, 60, 90, 120, 150, 180)  # Tiempos en minutos
 
