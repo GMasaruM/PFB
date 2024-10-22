@@ -1,10 +1,19 @@
+<<<<<<< HEAD
 #Aqui van las cosas de t# Instalar ggplot2 si aún no lo tienes
+=======
+#Aqui van las cosas de tania
+
+# Instala ggplot2 si aún no lo tienes
+>>>>>>> 16b0be37ee80606ccbf2002d1012124c533bae0c
 # install.packages("ggplot2")
 
 # Cargar librerías necesarias
 library(ggplot2)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 16b0be37ee80606ccbf2002d1012124c533bae0c
 # Datos de tiempo (minutos)
 tiempo <- c(0, 30, 60, 90, 120, 150, 180)  # Tiempos en minutos
 
@@ -14,6 +23,11 @@ abs_7 <- c(0.125, 2.342, 0.914, 0.892, 0.935, 1.023, 0.817)
 abs_13 <- c(1.781, 0.555, 0.646, 0.584, 0.641, 0.785, 0.562)
 
 # Convertir absorbancia a concentración de azúcares reductores usando una fórmula ficticia
+<<<<<<< HEAD
+=======
+# Aquí asumimos que la relación es [Azúcares Reductores] = m * Abs + c
+# Ajustar los valores de 'm' y 'c' según la curva de calibración de tu experimento
+>>>>>>> 16b0be37ee80606ccbf2002d1012124c533bae0c
 m <- 1.7713
 c <- -0.0478
 
@@ -45,7 +59,11 @@ modelo_2 <- lm(azucares_reductores_2 ~ tiempo, data = datos_2)
 modelo_7 <- lm(azucares_reductores_7 ~ tiempo, data = datos_7)
 modelo_13 <- lm(azucares_reductores_13 ~ tiempo, data = datos_13)
 
+<<<<<<< HEAD
 # Mostrar los coeficientes del modelo
+=======
+# Mostrar los coeficientes del modelo (pendiente y ordenada al origen)
+>>>>>>> 16b0be37ee80606ccbf2002d1012124c533bae0c
 summary(modelo_2)
 summary(modelo_7)
 summary(modelo_13)
@@ -68,6 +86,7 @@ actividad_enzimatica_13 <- (pendiente_13 * volumen_ensayo) / (coef_extincion_mol
 # Mostrar el valor de la actividad enzimática
 cat("Actividad enzimática para 2%: ", actividad_enzimatica_2, "U.I.\n")
 cat("Actividad enzimática para 7%: ", actividad_enzimatica_7, "U.I.\n")
+<<<<<<< HEAD
 cat("Actividad enzimática para 13%: ", actividad_enzimatica_13, "U.I.\n")
 
 ### Agregar modelo Michaelis-Menten
@@ -100,3 +119,6 @@ ggplot(data = data.frame(concentracion_sustrato, velocidad), aes(x = concentraci
        x = "[S] (mM)",
        y = "Velocidad de reacción (µM/min)") +
   theme_minimal()
+=======
+cat("Actividad enzimática para 13%: ", actividad_enzimatica_13, "U.I.\n")
+>>>>>>> 16b0be37ee80606ccbf2002d1012124c533bae0c
