@@ -1,16 +1,13 @@
 # Instala ggplot2 si aún no lo tienes
 # install.packages("ggplot2")
+# install.packages("readxl")
 
 # Cargar librerías necesarias
 library(ggplot2)
+library(readxl)
 
-# Datos de tiempo (minutos)
-tiempo <- c(0, 30, 60, 90, 120, 150, 180)  # Tiempos en minutos
+datos <- read_excel("datos_absorbancia.xlsx", col_types = c("text", "numeric", "numeric", "numeric"))
 
-# Absorbancia para distintas concentraciones de almidón (2%, 7%, 13%)
-abs_2 <- c(0.248, 0.287, 0.380, 0.413, 2.093, 0.566, 0.833)
-abs_7 <- c(0.125, 2.342, 0.914, 0.892, 0.935, 1.023, 0.817)
-abs_13 <- c(1.781, 0.555, 0.646, 0.584, 0.641, 0.785, 0.562)
 
 # Convertir absorbancia a concentración de azúcares reductores usando una fórmula ficticia
 # Aquí asumimos que la relación es [Azúcares Reductores] = m * Abs + c
@@ -19,32 +16,39 @@ m <- 1.7713
 c <- -0.0478
 
 # Calcular concentración de azúcares reductores para cada absorbancia
-azucares_reductores_2 <- m * abs_2 + c
-azucares_reductores_7 <- m * abs_7 + c
-azucares_reductores_13 <- m * abs_13 + c
+ar_e1 <- m * datos$`Absorbancia 1` + c
+ar_e2 <- m * datos$`Absorbancia 2` + c
+ar_e3 <- m * datos$`Absorbancia 3` + c
 
 # Crear un dataframe con los datos
-datos_2 <- data.frame(tiempo, azucares_reductores_2)
-datos_7 <- data.frame(tiempo, azucares_reductores_7)
-datos_13 <- data.frame(tiempo, azucares_reductores_13)
+
+AR <- data.frame(
+  Tiempo = datos$Tiempo,
+  AR_Ensayo_1 = ar_e1,
+  AR_Ensayo_2 = ar_e2,
+  AR_Ensayo_3 = ar_e3
+)
+
+print(AR)
+
 
 # Graficar los datos de azúcares reductores vs tiempo para las tres concentraciones de almidón
 ggplot() +
-  geom_point(data = datos_2, aes(x = tiempo, y = azucares_reductores_2), color = "blue", size = 3, label="2%") +
-  geom_smooth(data = datos_2, aes(x = tiempo, y = azucares_reductores_2), method = "lm", se = FALSE, color = "blue", linetype = "dashed") +
-  geom_point(data = datos_7, aes(x = tiempo, y = azucares_reductores_7), color = "red", size = 3, label="7%") +
-  geom_smooth(data = datos_7, aes(x = tiempo, y = azucares_reductores_7), method = "lm", se = FALSE, color = "red", linetype = "dashed") +
-  geom_point(data = datos_13, aes(x = tiempo, y = azucares_reductores_13), color = "green", size = 3, label="13%") +
-  geom_smooth(data = datos_13, aes(x = tiempo, y = azucares_reductores_13), method = "lm", se = FALSE, color = "green", linetype = "dashed") +
+  geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_1), color = "blue", size = 3, label="2%") +
+  geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_1), method = "lm", se = FALSE, color = "blue", linetype = "dashed") +
+  geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_2), color = "red", size = 3, label="7%") +
+  geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_2), method = "lm", se = FALSE, color = "red", linetype = "dashed") +
+  geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_3), color = "green", size = 3, label="13%") +
+  geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_3), method = "lm", se = FALSE, color = "green", linetype = "dashed") +
   labs(title = "Concentración de Azúcares Reductores vs Tiempo para diferentes concentraciones de almidón",
        x = "Tiempo (minutos)",
        y = "Concentración de Azúcares Reductores (g/L)") +
   theme_minimal()
 
 # Calcular la pendiente usando un modelo lineal para cada concentración
-modelo_2 <- lm(azucares_reductores_2 ~ tiempo, data = datos_2)
-modelo_7 <- lm(azucares_reductores_7 ~ tiempo, data = datos_7)
-modelo_13 <- lm(azucares_reductores_13 ~ tiempo, data = datos_13)
+modelo_2 <- lm(AR_Ensayo_1 ~ Tiempo, data = AR)
+modelo_7 <- lm(AR_Ensayo_2 ~ Tiempo, data = AR)
+modelo_13 <- lm(AR_Ensayo_3 ~ Tiempo, data = AR)
 
 # Mostrar los coeficientes del modelo (pendiente y ordenada al origen)
 summary(modelo_2)
