@@ -76,4 +76,37 @@ cat("Actividad enzimática para 2%: ", actividad_enzimatica_2, "U.I.\n")
 cat("Actividad enzimática para 7%: ", actividad_enzimatica_7, "U.I.\n")
 cat("Actividad enzimática para 13%: ", actividad_enzimatica_13, "U.I.\n")
 
+### Agregar modelo Michaelis-Menten
+
+# Supongamos datos de concentración de sustrato [S] (en mM)
+concentracion_sustrato <- c(0.1, 0.5, 1, 5, 10, 20, 50, 100, 200, 500)
+
+# Datos simulados de velocidad de reacción (en µM/min)
+velocidad <- c(0.5, 2.5, 4.8, 23, 37, 50, 57, 60, 61, 62)
+
+# Ajustar el modelo de Michaelis-Menten usando nls
+modelo_mm <- nls(velocidad ~ Vmax * concentracion_sustrato / (Km + concentracion_sustrato), 
+                 start = list(Vmax = 65, Km = 10))
+
+# Mostrar los resultados del modelo
+summary(modelo_mm)
+
+# Extraer Vmax y Km
+Vmax <- coef(modelo_mm)["Vmax"]
+Km <- coef(modelo_mm)["Km"]
+
+cat("Vmax:", Vmax, "\n")
+cat("Km:", Km, "\n")
+
+# Graficar la curva de Michaelis-Menten
+ggplot(data = data.frame(concentracion_sustrato, velocidad), aes(x = concentracion_sustrato, y = velocidad)) +
+  geom_point(color = "blue", size = 3) +
+  stat_smooth(method = "nls", formula = y ~ Vmax * x / (Km + x),
+              method.args = list(start = list(Vmax = 65, Km = 10)), se = FALSE, color = "red") +
+  labs(title = "Curva de Michaelis-Menten",
+       x = "[S] (mM)",
+       y = "Velocidad de reacción (µM/min)") +
+  theme_minimal()
+
+cat("Actividad enzimática para 13%: ", actividad_enzimatica_13, "U.I.\n")
 
