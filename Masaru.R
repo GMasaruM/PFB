@@ -77,6 +77,13 @@ abline(modelo_sin_outliers, col = "blue")
 eq_sin_outliers <- paste("y =", round(coef(modelo_sin_outliers)[2], 2), "x +", round(coef(modelo_sin_outliers)[1], 2))
 legend("topleft", legend = eq_sin_outliers, bty = "n", col = "blue", lwd = 2)
 
+# Calcular R^2
+r_squared <- summary(modelo_sin_outliers)$r.squared
+r_squared_text <- paste("R² =", round(r_squared, 3))
+
+# Agregar solo R² al gráfico
+legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
+
 ## AR 7%
 
 # Graficar los datos sin outliers
@@ -96,6 +103,12 @@ abline(modelo_filtrado, col = "blue")
 eq_filtrado <- paste("y =", round(coef(modelo_filtrado)[2], 2), "x +", round(coef(modelo_filtrado)[1], 2))
 legend("topleft", legend = eq_filtrado, bty = "n", col = "blue", lwd = 2)
 
+# Calcular R^2
+r_squared <- summary(modelo_filtrado)$r.squared
+r_squared_text <- paste("R² =", round(r_squared, 3))
+
+# Agregar solo R² al gráfico
+legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
 
 ## AR 13%
 
@@ -122,3 +135,10 @@ eq_filtrado <- paste("y =", round(coef(modelo_filtrado)[2], 2), "x +", round(coe
 
 # Agregar la ecuación al gráfico
 legend("topleft", legend = eq_filtrado, bty = "n", col = "blue", lwd = 2)
+
+# Calcular R^2
+r_squared <- summary(modelo_filtrado)$r.squared
+r_squared_text <- paste("R² =", round(r_squared, 3))
+
+# Agregar solo R² al gráfico
+legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
