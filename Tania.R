@@ -64,6 +64,50 @@ sustrato <- c(20, 70, 130)
 
 
 
+# Calcular los valores de 1/V y 1/[S] para el gráfico de Lineweaver-Burk
+inv_velocidades <- 1 / velocidades_iniciales
+inv_sustrato <- 1 / sustrato
+
+# Ordenar los datos en función de los valores de 1/[S]
+orden <- order(inv_sustrato)
+inv_sustrato <- inv_sustrato[orden]
+inv_velocidades <- inv_velocidades[orden]
+
+# Realizar la regresión lineal de 1/V vs 1/[S]
+modelo_lineweaver_burk <- lm(inv_velocidades ~ inv_sustrato)
+
+# Obtener la pendiente (Km/Vmax) y la ordenada al origen (1/Vmax)
+pendiente <- coef(modelo_lineweaver_burk)[2] # Km/Vmax
+ordenada_origen <- coef(modelo_lineweaver_burk)[1] # 1/Vmax
+
+# Calcular Vmax y Km a partir de la pendiente y la ordenada al origen
+Vmax <- 1 / ordenada_origen
+Km <- pendiente * Vmax
+
+# Mostrar los resultados con las unidades
+cat("Vmax:", Vmax, "g/L*min\n")
+cat("Km:", Km, "g/L\n")
+
+# Generar la gráfica de Lineweaver-Burk
+plot(inv_sustrato, inv_velocidades, 
+     xlab = "1/[S] (1/g/L)", 
+     ylab = "1/V (min/L/g)", 
+     main = "Gráfica de Lineweaver-Burk", 
+     pch = 19, 
+     col = "blue")
+
+# Agregar la línea de regresión al gráfico
+abline(modelo_lineweaver_burk, col = "red")
+
+# Agregar leyenda con los valores de Vmax y Km
+legend("topright", legend = c(paste("Vmax:", round(Vmax, 4), "g/L*min"), paste("Km:", round(Km, 4), "g/L")),
+       col = c("red", "red"), lty = 1, bty = "n")
+
+
+
+
+
+
 
 
 # Asegúrate de tener el paquete 'renz' instalado y cargado
@@ -77,7 +121,7 @@ datos <- data.frame(
 )
 
 # Aplicar la función lb() para obtener Vmax y Km usando regresión ponderada
-resultados_lb <- lb(datos, unit_S = 'g/L', unit_v = 'g/L*min', weighting = TRUE, plot = TRUE)
+resultados_lb <- lb(datos, unit_S = 'g/L', unit_v = 'g/L*min',  plot = TRUE)
 
 # Imprimir los resultados
 cat("Vmax estimado:", resultados_lb$Vm, "\n")
