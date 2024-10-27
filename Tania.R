@@ -120,11 +120,76 @@ datos <- data.frame(
   velocidad = c(pendiente_2, pendiente_7, pendiente_13)  # Velocidades iniciales en g/L*min
 )
 
+# Lineweaver - Burk
 # Aplicar la función lb() para obtener Vmax y Km usando regresión ponderada
-resultados_lb <- lb(datos, unit_S = 'g/L', unit_v = 'g/L*min',  plot = TRUE)
+resultados_lb <- lb(datos, unit_S = 'g/L', unit_v = 'g/L*min')
 
 # Imprimir los resultados
 cat("Vmax estimado:", resultados_lb$Vm, "\n")
 cat("Km estimado:", resultados_lb$Km, "\n")
+
+
+
+
+
+# Eadie-Hofstee
+# Aplicar la función eh() para obtener Vmax y Km usando regresión ponderada
+resultados_eh <- eh(datos, unit_S = 'g/L', unit_v = 'g/L*min', plot = FALSE) # Generar sin gráfica automática
+
+# Calcular los valores de v y v/[S]
+v <- datos$v
+v_over_S <- v / datos$s
+
+# Calcular los límites automáticos basados en los valores mínimos y máximos de v/[S] y v
+xlim_vals <- range(v_over_S) * c(0.9, 1.1)  # Margen del 10% para el eje x
+ylim_vals <- range(v) * c(0.9, 1.1)  # Margen del 10% para el eje y
+
+# Graficar manualmente los puntos y la línea de regresión
+plot(v_over_S, v, 
+     xlab = "v/[S] (g/L)", 
+     ylab = "v (g/L*min)", 
+     pch = 19, col = "blue", xlim = xlim_vals, ylim = ylim_vals)
+
+# Ajustar un modelo de regresión lineal
+modelo_eh <- lm(v ~ v_over_S)
+
+# Extraer los coeficientes
+intercepto <- coef(modelo_eh)[1]
+pendiente <- coef(modelo_eh)[2]
+
+# Agregar la línea de regresión al gráfico
+abline(modelo_eh, col = "red")
+
+# Agregar título usando mtext()
+mtext("Gráfica de Eadie-Hofstee", side = 3, line = 3, cex = 1.5, col = "black")
+
+# Imprimir Vmax y Km en la parte superior del gráfico
+mtext(paste("Km:", round(resultados_eh$Km, 2)), side = 3, line = 1, adj = 0, cex = 1.2, col = "black")
+mtext(paste("Vm:", round(resultados_eh$Vm, 2)), side = 3, line = 1, adj = 1, cex = 1.2, col = "black")
+
+# Mostrar la ecuación de la recta en el gráfico
+eq_text <- paste("y =", round(intercepto, 2), "+", round(pendiente, 2), "* x")
+text(x = mean(v_over_S), y = max(v) * 0.9, labels = eq_text, col = "black")
+
+# Mostrar los resultados calculados
+cat("Ecuación de la recta: ", eq_text, "\n")
+cat("Vmax estimado:", resultados_eh$Vm, "g/L*min\n")
+cat("Km estimado:", resultados_eh$Km, "g/L\n")
+
+
+
+# Hanes-Woolf
+resultados_hw <- hw(datos, unit_S = 'g/L', unit_v = 'g/L*min')
+
+# Imprimir los resultados
+cat("Vmax estimado:", resultados_hw$Vm, "\n")
+cat("Km estimado:", resultados_hw$Km, "\n")
+
+
+
+resultados_MM <- dir.MM(datos, unit_S = 'g/L', unit_v = 'g/L*min')
+
+cat("Vmax estimado:", resultados_MM$Vm, "\n")
+cat("Km estimado:", resultados_MM$Km, "\n")
 
 
