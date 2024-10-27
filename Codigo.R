@@ -364,3 +364,9 @@ cat("Vmax estimado:", resultados_MM$Vm, "\n")
 cat("Km estimado:", resultados_MM$Km, "\n")
 
 
+# Etanol
+data$Etanol_2 <- 14.89 * data$`Abs Etanol 2%` + 0.1563
+data$Etanol_7 <- 14.89 * data$`Abs Etanol 7%` + 0.1563
+data$Etanol_13 <- 14.89 * data$`Abs Etanol 13%` + 0.1563
+
+
