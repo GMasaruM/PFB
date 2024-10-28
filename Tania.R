@@ -1,72 +1,242 @@
-# Datos
-Abs_2 <- c(0.248, 0.287, 0.38, 0.413, 0.566)
-AR_2 <- c(0.391, 9.211, 12.488, 13.675, 19.095)
-t_2 <- c(0, 30, 60, 90, 150)
 
-# Crear el modelo de regresión lineal para AR 2% vs Tiempo
-modelo_ar_2 <- lm(AR_2 ~ t_2)
+## Librerias y datos
 
-# Graficar AR 2% vs Tiempo
-plot(t_2, AR_2, main = "Gráfico de AR 2% vs Tiempo", xlab = "Tiempo", ylab = "AR 2%", pch = 16, col = "green")
-abline(modelo_ar_2, col = "red") # Añadir la línea de regresión
+# install.packages("ggplot2")
+# install.packages("readxl")
 
-# Obtener la ecuación de la recta para AR 2%
-coeficientes_ar_2 <- coef(modelo_ar_2)
-cat("La ecuación de la recta para AR 2% es: AR 2% =", coeficientes_ar_2[1], "+", coeficientes_ar_2[2], "* Tiempo\n")
+# Cargar librerías necesarias
+library(ggplot2)
+library(readxl)
+
+data <- read_excel("datos_absorbancia.xlsx")
+
+# Función para filtrar los datos
+
+filtrar_datos <- function(data, variable) {
+  # Verificar que la variable está en el dataframe
+  if (!variable %in% colnames(data)) {
+    stop(paste("La variable", variable, "no se encuentra en el dataframe."))
+  }
+  
+  # Seleccionar solo la columna "Tiempo" y la variable especificada
+  datos_filtrados <- data[, c("Tiempo", variable)]  # Asegúrate de que "Tiempo" también esté presente
+  
+  # Eliminar filas con NA
+  datos_filtrados <- na.omit(datos_filtrados)  # Eliminar filas con NA
+  
+  # Eliminar valores que son mayores que el siguiente
+  i <- 1
+  while (i < nrow(datos_filtrados)) {
+    if (datos_filtrados[[variable]][i] > datos_filtrados[[variable]][i + 1]) {
+      datos_filtrados <- datos_filtrados[-i, ]  # Eliminar el valor actual
+    } else {
+      i <- i + 1
+    }
+  }
+  
+  # Inicializar el índice
+  i <- 1
+  
+  # Iterar sobre los valores
+  while (i < nrow(datos_filtrados)) {
+    # Compara el valor actual con el siguiente
+    if (i < nrow(datos_filtrados) - 1 && 
+        (datos_filtrados[[variable]][i + 1] - datos_filtrados[[variable]][i]) > 30) {
+      # Si hay un salto mayor a 30, eliminar el siguiente valor
+      datos_filtrados <- datos_filtrados[-(i + 1), ]
+      i <- i + 1
+      # No incrementar i, ya que hemos eliminado un elemento
+    } else {
+      i <- i + 1  # Solo incrementar si no se elimina
+    }
+  }
+  
+  return(datos_filtrados)  # Devolver el dataframe filtrado
+}
+###
+
+
+## Parte de Azucares reductores
+
+# Convertir absorbancia a concentración de azúcares reductores usando una fórmula ficticia
+# Aquí asumimos que la relación es [Azúcares Reductores] = m * Abs + c
+# Ajustar los valores de 'm' y 'c' según la curva de calibración de tu experimento
+m <- 1.7713
+c <- -0.0478
+
+# Calcular concentración de azúcares reductores para cada absorbancia
+ar_e1 <- m * data$`Absorbancia 1` + c
+ar_e2 <- m * data$`Absorbancia 2` + c
+ar_e3 <- m * data$`Absorbancia 3` + c
+
+# Crear un dataframe con los datos
+
+AR <- data.frame(
+  Tiempo = data$Tiempo,
+  AR_Ensayo_1 = ar_e1,
+  AR_Ensayo_2 = ar_e2,
+  AR_Ensayo_3 = ar_e3
+)
+
+print(AR)
+
+# Filtrar los datos para "AR 2%", "AR 7%", o "AR 13%"
+datos_filtrados_ar2 <- filtrar_datos(data, "AR 2%")
+datos_filtrados_ar7 <- filtrar_datos(data, "AR 7%")
+datos_filtrados_ar13 <- filtrar_datos(data, "AR 13%")
 
 
 
-# Datos
-Abs_7 <- c(0.125, 0.892, 0.935, 1.023)
-AR_7 <- c(0.173, 30.644, 32.156, 35.285)
-t_7 <- c(0, 90, 120, 150)
+# Graficar los datos de azúcares reductores vs tiempo para las tres concentraciones de almidón
+#ggplot() +
+# geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_1), color = "blue", size = 3, label="2%") +
+#geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_1), method = "lm", se = FALSE, color = "blue", linetype = "dashed") +
+#geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_2), color = "red", size = 3, label="7%") +
+#geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_2), method = "lm", se = FALSE, color = "red", linetype = "dashed") +
+#geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_3), color = "green", size = 3, label="13%") +
+#geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_3), method = "lm", se = FALSE, color = "green", linetype = "dashed") +
+#labs(title = "Concentración de Azúcares Reductores vs Tiempo para diferentes concentraciones de almidón",
+#     x = "Tiempo (minutos)",
+#    y = "Concentración de Azúcares Reductores (g/L)") +
+#theme_minimal()
 
 
-# Graficar AR 7% vs Tiempo
-plot(t_7, AR_7, main = "Gráfico de AR 7% vs Tiempo", xlab = "Tiempo", ylab = "AR 7%", pch = 16, col = "green")
-abline(modelo_ar_7, col = "red") # Añadir la línea de regresión
+# Calcular la pendiente usando un modelo lineal para cada concentración
+#modelo_2 <- lm(AR_Ensayo_1 ~ Tiempo, data = AR)
+#modelo_7 <- lm(AR_Ensayo_2 ~ Tiempo, data = AR)
+#modelo_13 <- lm(AR_Ensayo_3 ~ Tiempo, data = AR)
 
-# Obtener la ecuación de la recta para AR 7%
-coeficientes_ar_7 <- coef(modelo_ar_7)
-cat("La ecuación de la recta para AR 7% es: AR 7% =", coeficientes_ar_7[1], "+", coeficientes_ar_7[2], "* Tiempo\n")
-
-
-
-# Datos
-Abs_13 <- c(1.781, 0.584, 0.641, 0.785)
-AR_13 <- c(3.107, 39.466, 43.469, 53.671)
-t_13 <- c(0, 90, 120, 150)
-
-# Graficar AR 13% vs Tiempo
-plot(t_13, AR_13, main = "Gráfico de AR 13% vs Tiempo", xlab = "Tiempo", ylab = "AR 13%", pch = 16, col = "green")
-abline(modelo_ar_13, col = "red") # Añadir la línea de regresión
-
-# Obtener la ecuación de la recta para AR 13%
-coeficientes_ar_13 <- coef(modelo_ar_13)
-cat("La ecuación de la recta para AR 13% es: AR 13% =", coeficientes_ar_13[1], "+", coeficientes_ar_13[2], "* Tiempo\n")
+modelo_2 <- lm(`AR 2%` ~ Tiempo, data = datos_filtrados_ar2)
+modelo_7 <- lm(`AR 7%` ~ Tiempo, data = datos_filtrados_ar7)
+modelo_13 <- lm(`AR 13%` ~ Tiempo, data = datos_filtrados_ar13)
 
 
-# Obtener las pendientes (coeficiente)
-pendiente_2 <- coef(modelo_ar_2)[2]
-pendiente_7 <- coef(modelo_ar_7)[2]
-pendiente_13 <- coef(modelo_ar_13)[2]
+# 2 %
+plot(datos_filtrados_ar2$Tiempo, datos_filtrados_ar2$`AR 2%`, 
+     main = "Modelo Lineal de AR 2% vs Tiempo (sin outliers)", 
+     xlab = "Tiempo", 
+     ylab = "AR 2%", 
+     pch = 19)
+
+# Agregar la línea de tendencia
+abline(modelo_2, col = "blue")
+
+# Agregar la ecuación de la recta al gráfico
+eq_sin_outliers <- paste("y =", round(coef(modelo_2)[2], 2), "x +", round(coef(modelo_2)[1], 2))
+legend("topleft", legend = eq_sin_outliers, bty = "n", col = "blue", lwd = 2)
+
+# Calcular R^2
+r_squared <- summary(modelo_2)$r.squared
+r_squared_text <- paste("R² =", round(r_squared, 3))
+
+# Agregar solo R² al gráfico
+legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
+
+# 7 %
+# Graficar los datos sin outliers
+plot(datos_filtrados_ar7$Tiempo, datos_filtrados_ar7$`AR 7%`, 
+     main = "Modelo Lineal de AR 7% vs Tiempo (sin outliers)", 
+     xlab = "Tiempo", 
+     ylab = "AR 7%", 
+     pch = 19)
+
+# Agregar la línea de tendencia
+abline(modelo_7, col = "blue")
+
+# Agregar la ecuación de la recta al gráfico
+eq_filtrado <- paste("y =", round(coef(modelo_7)[2], 2), "x +", round(coef(modelo_7)[1], 2))
+legend("topleft", legend = eq_filtrado, bty = "n", col = "blue", lwd = 2)
+
+# Calcular R^2
+r_squared <- summary(modelo_7)$r.squared
+r_squared_text <- paste("R² =", round(r_squared, 3))
+
+# Agregar solo R² al gráfico
+legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
+
+# 13 %
+
+# Graficar los datos filtrados
+plot(datos_filtrados_ar13$Tiempo, datos_filtrados_ar13$`AR 13%`, 
+     main = "Modelo Lineal de AR 13% vs Tiempo (sin outliers)", 
+     xlab = "Tiempo", 
+     ylab = "AR 13%", 
+     pch = 19)
+
+# Agregar la línea de tendencia
+abline(modelo_13, col = "blue")
+
+# Crear la ecuación de la recta
+eq_filtrado <- paste("y =", round(coef(modelo_13)[2], 2), "x +", round(coef(modelo_13)[1], 2))
+
+# Agregar la ecuación al gráfico
+legend("topleft", legend = eq_filtrado, bty = "n", col = "blue", lwd = 2)
+
+# Calcular R^2
+r_squared <- summary(modelo_13)$r.squared
+r_squared_text <- paste("R² =", round(r_squared, 3))
+
+# Agregar solo R² al gráfico
+legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
+
+# Mostrar los coeficientes del modelo (pendiente y ordenada al origen)
+summary(modelo_2)
+summary(modelo_7)
+summary(modelo_13)
+
+# Mezcla de las tres graficas
+ggplot() +
+  geom_point(data = datos_filtrados_ar2, aes(x = Tiempo, y = `AR 2%`), color = "blue", size = 3) +
+  geom_smooth(data = datos_filtrados_ar2, aes(x = Tiempo, y = `AR 2%`), method = "lm", se = FALSE, color = "blue", linetype = "dashed") +
+  geom_text(data = datos_filtrados_ar2, aes(x = Tiempo, y = `AR 2%`, label = "2%"), vjust = -1, color = "blue") +
+  
+  geom_point(data = datos_filtrados_ar7, aes(x = Tiempo, y = `AR 7%`), color = "red", size = 3) +
+  geom_smooth(data = datos_filtrados_ar7, aes(x = Tiempo, y = `AR 7%`), method = "lm", se = FALSE, color = "red", linetype = "dashed") +
+  geom_text(data = datos_filtrados_ar7, aes(x = Tiempo, y = `AR 7%`, label = "7%"), vjust = -1, color = "red") +
+  
+  geom_point(data = datos_filtrados_ar13, aes(x = Tiempo, y = `AR 13%`), color = "green", size = 3) +
+  geom_smooth(data = datos_filtrados_ar13, aes(x = Tiempo, y = `AR 13%`), method = "lm", se = FALSE, color = "green", linetype = "dashed") +
+  geom_text(data = datos_filtrados_ar13, aes(x = Tiempo, y = `AR 13%`, label = "13%"), vjust = -1, color = "green") +
+  
+  labs(title = "Concentración de Azúcares Reductores vs Tiempo",
+       x = "Tiempo (minutos)",
+       y = "Concentración de Azúcares Reductores (g/L)") +
+  theme_minimal()
 
 
+## Parte para la actividad enzimatica
 
+# Extraer la pendiente para cada concentración
+pendiente_2 <- coef(modelo_2)[2]
+pendiente_7 <- coef(modelo_7)[2]
+pendiente_13 <- coef(modelo_13)[2]
 
+# Parámetros adicionales para la actividad enzimática
+volumen_ensayo <- 1  # Volumen del ensayo en mL (ajustar si es diferente)
+coef_extincion_molar <- 6220  # Coeficiente de extinción molar para NADH (M^-1 cm^-1)
+distancia_celda <- 1  # Distancia de la celda del espectrofotómetro (cm)
+
+# Calcular la actividad enzimática (U.I.) para cada concentración
+actividad_enzimatica_2 <- (pendiente_2 * volumen_ensayo) / (coef_extincion_molar * distancia_celda)
+actividad_enzimatica_7 <- (pendiente_7 * volumen_ensayo) / (coef_extincion_molar * distancia_celda)
+actividad_enzimatica_13 <- (pendiente_13 * volumen_ensayo) / (coef_extincion_molar * distancia_celda)
+
+# Mostrar el valor de la actividad enzimática
+cat("Actividad enzimática para 2%: ", actividad_enzimatica_2, "U.I.\n")
+cat("Actividad enzimática para 7%: ", actividad_enzimatica_7, "U.I.\n")
+cat("Actividad enzimática para 13%: ", actividad_enzimatica_13, "U.I.\n")
+
+### Agregar modelo Lineweaver - Burk
+
+sustrato <- data$Sustrato
 
 # Datos de las velocidades iniciales
 velocidades_iniciales <- c(pendiente_2, pendiente_7, pendiente_13)
 
-# Vector de sustratos
-sustrato <- c(20, 70, 130)
-
-
-
-
 # Calcular los valores de 1/V y 1/[S] para el gráfico de Lineweaver-Burk
 inv_velocidades <- 1 / velocidades_iniciales
 inv_sustrato <- 1 / sustrato
+
 
 # Ordenar los datos en función de los valores de 1/[S]
 orden <- order(inv_sustrato)
@@ -104,21 +274,22 @@ legend("topright", legend = c(paste("Vmax:", round(Vmax, 4), "g/L*min"), paste("
        col = c("red", "red"), lty = 1, bty = "n")
 
 
-
-
-
-
-
-
 # Asegúrate de tener el paquete 'renz' instalado y cargado
 # install.packages("renz")  # Si aún no está instalado
 library(renz)
 
+sustrato_limpio <- na.omit(data$Sustrato)
+
+
+
 # Datos de concentración de sustrato y velocidades iniciales (pendientes)
 datos <- data.frame(
-  sustrato = c(20, 70, 130),                       # Concentraciones de sustrato en g/L
+  sustrato = sustrato_limpio,                       # Concentraciones de sustrato en g/L
   velocidad = c(pendiente_2, pendiente_7, pendiente_13)  # Velocidades iniciales en g/L*min
 )
+
+
+
 
 # Lineweaver - Burk
 # Aplicar la función lb() para obtener Vmax y Km usando regresión ponderada
@@ -191,5 +362,53 @@ resultados_MM <- dir.MM(datos, unit_S = 'g/L', unit_v = 'g/L*min')
 
 cat("Vmax estimado:", resultados_MM$Vm, "\n")
 cat("Km estimado:", resultados_MM$Km, "\n")
+
+
+# Etanol
+data$Etanol_2 <- 14.89 * data$`Abs Etanol 2%` + 0.1563
+data$Etanol_7 <- 14.89 * data$`Abs Etanol 7%` + 0.1563
+data$Etanol_13 <- 14.89 * data$`Abs Etanol 13%` + 0.1563
+
+
+
+# Calcular la correlación entre AR y Etanol 
+cor_2 <- cor(data$`AR 2%`, data$Etanol_2, use = "complete.obs")
+cor_7 <- cor(data$`AR 7%`, data$Etanol_7, use = "complete.obs")
+cor_13 <- cor(data$`AR 7%`, data$Etanol_13, use = "complete.obs")
+
+
+
+
+#install.packages("tidyr")
+library(tidyr)
+
+
+# Crear un dataframe largo para el gráfico
+datos_long <- pivot_longer(data, 
+                           cols = c(`AR 2%`, `AR 7%`, `AR 13%`, Etanol_2, Etanol_7, Etanol_13), 
+                           names_to = "Variable", 
+                           values_to = "Concentracion")
+
+
+# Crear el gráfico con dos ejes Y
+ggplot(datos_long, aes(x = Tiempo)) +
+  geom_line(data = subset(datos_long, grepl("AR", Variable)), 
+            aes(y = Concentracion, color = Variable), linetype = "solid") +
+  geom_line(data = subset(datos_long, grepl("Etanol", Variable)), 
+            aes(y = Concentracion, color = Variable), linetype = "dashed") +
+  scale_color_manual(values = c('AR 2%' = 'blue', 
+                                'AR 7%' = 'orange', 
+                                'AR 13%' = 'red', 
+                                'Etanol_2' = 'green', 
+                                'Etanol_7' = 'purple', 
+                                'Etanol_13' = 'brown'),
+                     name = "Variables") +
+  scale_y_continuous(name = "Concentración de AR", 
+                     sec.axis = sec_axis(~., name = "Concentración de Etanol")) +
+  labs(title = "Concentraciones de AR y Etanol en función del Tiempo",
+       x = "Tiempo (min)") +
+  theme_minimal() +
+  theme(legend.position = "right")
+
 
 
