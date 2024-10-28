@@ -1,11 +1,13 @@
 
 # Cosas de masaru
 
+library(ggplot2)
 library(readxl)
 
-data <- read_excel("Libro1.xlsx")
+data <- read_excel("datos_absorbancia.xlsx")
 
 # Función para filtrar los datos
+
 filtrar_datos <- function(data, variable) {
   # Verificar que la variable está en el dataframe
   if (!variable %in% colnames(data)) {
@@ -48,97 +50,120 @@ filtrar_datos <- function(data, variable) {
   return(datos_filtrados)  # Devolver el dataframe filtrado
 }
 
-# Cargar los datos (asegúrate de que los datos están en un dataframe llamado 'data')
-# data <- read.csv("tu_archivo.csv")
-data <- read_excel("Libro1.xlsx")
+filtrar_datos_multi <- function(data, variable1, variable2) {
+  # Verificar que las variables están en el dataframe
+  if (!variable1 %in% colnames(data)) {
+    stop(paste("La variable", variable1, "no se encuentra en el dataframe."))
+  }
+  if (!variable2 %in% colnames(data)) {
+    stop(paste("La variable", variable2, "no se encuentra en el dataframe."))
+  }
+  
+  # Seleccionar solo la columna "Tiempo" y las variables especificadas
+  datos_filtrados <- data[, c("Tiempo", variable1, variable2)]
+  
+  # Eliminar filas con NA
+  datos_filtrados <- na.omit(datos_filtrados)
+  
+  # Eliminar valores que son mayores que el siguiente para variable1
+  i <- 1
+  while (i < nrow(datos_filtrados)) {
+    if (datos_filtrados[[variable1]][i] > datos_filtrados[[variable1]][i + 1]) {
+      datos_filtrados <- datos_filtrados[-i, ]
+      i <- i + 1
+    } else {
+      i <- i + 1
+    }
+  }
+  
+  # Eliminar valores que son mayores que el siguiente para variable2
+  i <- 1
+  while (i < nrow(datos_filtrados)) {
+    if (datos_filtrados[[variable2]][i] > datos_filtrados[[variable2]][i + 1]) {
+      datos_filtrados <- datos_filtrados[-i, ]
+      i <- i + 1
+    } else {
+      i <- i + 1
+    }
+  }
+  
+  # Inicializar el índice para la comparación de saltos
+  i <- 1
+  
+  # Iterar sobre los valores de variable1
+  while (i < nrow(datos_filtrados)) {
+    if (i < nrow(datos_filtrados) - 1 && 
+        (datos_filtrados[[variable1]][i + 1] - datos_filtrados[[variable1]][i]) > 30) {
+      datos_filtrados <- datos_filtrados[-(i + 1), ]
+      i <- i + 1
+      # No incrementar i, ya que hemos eliminado un elemento
+    } else {
+      i <- i + 1
+    }
+  }
+  
+  # Reiniciar el índice para la variable2
+  i <- 1
+  
+  # Iterar sobre los valores de variable2
+  while (i < nrow(datos_filtrados)) {
+    if (i < nrow(datos_filtrados) - 1 && 
+        (datos_filtrados[[variable2]][i + 1] - datos_filtrados[[variable2]][i]) > 30) {
+      datos_filtrados <- datos_filtrados[-(i + 1), ]
+      i <- i + 1
+      # No incrementar i, ya que hemos eliminado un elemento
+    } else {
+      i <- i + 1
+    }
+  }
+  
+  return(datos_filtrados)  # Devolver el dataframe filtrado
+}
 
+###
+
+# Filtrar los datos 
+datos_filtrados_eta2 <- filtrar_datos(data, "Abs Etanol 2%")
+datos_filtrados_eta7 <- filtrar_datos(data, "Abs Etanol 7%")
+datos_filtrados_eta13 <- filtrar_datos(data, "Abs Etanol 13%")
 
 # Filtrar los datos para "AR 2%", "AR 7%", o "AR 13%"
 datos_filtrados_ar2 <- filtrar_datos(data, "AR 2%")
 datos_filtrados_ar7 <- filtrar_datos(data, "AR 7%")
 datos_filtrados_ar13 <- filtrar_datos(data, "AR 13%")
 
-## AR 2%
+Multi2 <- filtrar_datos_multi(data,"AR 2%","Abs Etanol 2%")
+Multi7 <- filtrar_datos_multi(data,"AR 7%","Abs Etanol 7%")
+Multi13 <- filtrar_datos_multi(data,"AR 13%","Abs Etanol 13%")
 
-# Graficar los datos sin outliers
-plot(datos_filtrados_ar2$Tiempo, datos_filtrados_ar2$`AR 2%`, 
-     main = "Modelo Lineal de AR 2% vs Tiempo (sin outliers)", 
-     xlab = "Tiempo", 
-     ylab = "AR 2%", 
-     pch = 19)
+# obtenemos la produccion de etanol g/l
 
-# Ajustar el modelo lineal
-modelo_sin_outliers <- lm(`AR 2%` ~ Tiempo, data = datos_filtrados_ar2)
+Etanol_2 <- 14.89 * Multi2$`Abs Etanol 2%` + 0.1563
+Etanol_7 <- 14.89 * Multi7$`Abs Etanol 7%` + 0.1563
+Etanol_13 <- 14.89 * Multi13$`Abs Etanol 13%` + 0.1563
 
-# Agregar la línea de tendencia
-abline(modelo_sin_outliers, col = "blue")
-
-# Agregar la ecuación de la recta al gráfico
-eq_sin_outliers <- paste("y =", round(coef(modelo_sin_outliers)[2], 2), "x +", round(coef(modelo_sin_outliers)[1], 2))
-legend("topleft", legend = eq_sin_outliers, bty = "n", col = "blue", lwd = 2)
-
-# Calcular R^2
-r_squared <- summary(modelo_sin_outliers)$r.squared
-r_squared_text <- paste("R² =", round(r_squared, 3))
-
-# Agregar solo R² al gráfico
-legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
-
-## AR 7%
-
-# Graficar los datos sin outliers
-plot(datos_filtrados_ar7$Tiempo, datos_filtrados_ar7$`AR 7%`, 
-     main = "Modelo Lineal de AR 7% vs Tiempo (sin outliers)", 
-     xlab = "Tiempo", 
-     ylab = "AR 7%", 
-     pch = 19)
-
-# Ajustar el modelo lineal
-modelo_filtrado <- lm(`AR 7%` ~ Tiempo, data = datos_filtrados_ar7)
-
-# Agregar la línea de tendencia
-abline(modelo_filtrado, col = "blue")
-
-# Agregar la ecuación de la recta al gráfico
-eq_filtrado <- paste("y =", round(coef(modelo_filtrado)[2], 2), "x +", round(coef(modelo_filtrado)[1], 2))
-legend("topleft", legend = eq_filtrado, bty = "n", col = "blue", lwd = 2)
-
-# Calcular R^2
-r_squared <- summary(modelo_filtrado)$r.squared
-r_squared_text <- paste("R² =", round(r_squared, 3))
-
-# Agregar solo R² al gráfico
-legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
-
-## AR 13%
+modelo_eta2 <- lm(`Abs Etanol 2%` ~ Tiempo, data = Multi2)
+modelo_eta7 <- lm(`Abs Etanol 7%` ~ Tiempo, data = Multi7)
+modelo_eta13 <- lm(`Abs Etanol 13%` ~ Tiempo, data = Multi13)
 
 
-# Cargar los datos (asegúrate de que los datos están en un dataframe llamado 'data')
-# data <- read.csv("tu_archivo.csv")
+# Calculamos el "Ethanol yield"
 
 
-# Ajustar el modelo lineal a los datos filtrados
-modelo_filtrado <- lm(`AR 13%` ~ Tiempo, data = datos_filtrados_ar13)
 
-# Graficar los datos filtrados
-plot(datos_filtrados_ar13$Tiempo, datos_filtrados_ar13$`AR 13%`, 
-     main = "Modelo Lineal de AR 13% vs Tiempo (sin outliers)", 
-     xlab = "Tiempo", 
-     ylab = "AR 13%", 
-     pch = 19)
+Ethanol_yield2 <- (Etanol_2 / Multi2$`AR 2%`)
 
-# Agregar la línea de tendencia
-abline(modelo_filtrado, col = "blue")
+Ethanol_yield7 <-(Etanol_7 / Multi7$`AR 7%`)
 
-# Crear la ecuación de la recta
-eq_filtrado <- paste("y =", round(coef(modelo_filtrado)[2], 2), "x +", round(coef(modelo_filtrado)[1], 2))
+Ethanol_yield13 <- (Etanol_13 / Multi13$`AR 13%`) 
 
-# Agregar la ecuación al gráfico
-legend("topleft", legend = eq_filtrado, bty = "n", col = "blue", lwd = 2)
+# Calculamos el "Ethanol productivity"
 
-# Calcular R^2
-r_squared <- summary(modelo_filtrado)$r.squared
-r_squared_text <- paste("R² =", round(r_squared, 3))
 
-# Agregar solo R² al gráfico
-legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
+Ethanol_productivity2 <- (Etanol_2 / Multi2$Tiempo)
+
+Ethanol_productivity7 <- (Etanol_7 / Multi7$Tiempo)
+
+Ethanol_productivity13 <- (Etanol_13 / Multi13$Tiempo) 
+
+
