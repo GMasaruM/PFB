@@ -545,7 +545,7 @@ ggplot(datos_long, aes(x = Tiempo)) +
   theme_minimal() +
   theme(legend.position = "right")
 
-
+#a
 
 
 
