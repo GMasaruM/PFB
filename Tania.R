@@ -1,414 +1,261 @@
 
-## Librerias y datos
+## Librerias 
 
 # install.packages("ggplot2")
 # install.packages("readxl")
+# install.packages("tidyr")
+
 
 # Cargar librerías necesarias
 library(ggplot2)
 library(readxl)
-
-data <- read_excel("datos_absorbancia.xlsx")
-
-# Función para filtrar los datos
-
-filtrar_datos <- function(data, variable) {
-  # Verificar que la variable está en el dataframe
-  if (!variable %in% colnames(data)) {
-    stop(paste("La variable", variable, "no se encuentra en el dataframe."))
-  }
-  
-  # Seleccionar solo la columna "Tiempo" y la variable especificada
-  datos_filtrados <- data[, c("Tiempo", variable)]  # Asegúrate de que "Tiempo" también esté presente
-  
-  # Eliminar filas con NA
-  datos_filtrados <- na.omit(datos_filtrados)  # Eliminar filas con NA
-  
-  # Eliminar valores que son mayores que el siguiente
-  i <- 1
-  while (i < nrow(datos_filtrados)) {
-    if (datos_filtrados[[variable]][i] > datos_filtrados[[variable]][i + 1]) {
-      datos_filtrados <- datos_filtrados[-i, ]  # Eliminar el valor actual
-    } else {
-      i <- i + 1
-    }
-  }
-  
-  # Inicializar el índice
-  i <- 1
-  
-  # Iterar sobre los valores
-  while (i < nrow(datos_filtrados)) {
-    # Compara el valor actual con el siguiente
-    if (i < nrow(datos_filtrados) - 1 && 
-        (datos_filtrados[[variable]][i + 1] - datos_filtrados[[variable]][i]) > 30) {
-      # Si hay un salto mayor a 30, eliminar el siguiente valor
-      datos_filtrados <- datos_filtrados[-(i + 1), ]
-      i <- i + 1
-      # No incrementar i, ya que hemos eliminado un elemento
-    } else {
-      i <- i + 1  # Solo incrementar si no se elimina
-    }
-  }
-  
-  return(datos_filtrados)  # Devolver el dataframe filtrado
-}
-###
-
-
-## Parte de Azucares reductores
-
-# Convertir absorbancia a concentración de azúcares reductores usando una fórmula ficticia
-# Aquí asumimos que la relación es [Azúcares Reductores] = m * Abs + c
-# Ajustar los valores de 'm' y 'c' según la curva de calibración de tu experimento
-m <- 1.7713
-c <- -0.0478
-
-# Calcular concentración de azúcares reductores para cada absorbancia
-ar_e1 <- m * data$`Absorbancia 1` + c
-ar_e2 <- m * data$`Absorbancia 2` + c
-ar_e3 <- m * data$`Absorbancia 3` + c
-
-# Crear un dataframe con los datos
-
-AR <- data.frame(
-  Tiempo = data$Tiempo,
-  AR_Ensayo_1 = ar_e1,
-  AR_Ensayo_2 = ar_e2,
-  AR_Ensayo_3 = ar_e3
-)
-
-print(AR)
-
-# Filtrar los datos para "AR 2%", "AR 7%", o "AR 13%"
-datos_filtrados_ar2 <- filtrar_datos(data, "AR 2%")
-datos_filtrados_ar7 <- filtrar_datos(data, "AR 7%")
-datos_filtrados_ar13 <- filtrar_datos(data, "AR 13%")
-
-
-
-# Graficar los datos de azúcares reductores vs tiempo para las tres concentraciones de almidón
-#ggplot() +
-# geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_1), color = "blue", size = 3, label="2%") +
-#geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_1), method = "lm", se = FALSE, color = "blue", linetype = "dashed") +
-#geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_2), color = "red", size = 3, label="7%") +
-#geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_2), method = "lm", se = FALSE, color = "red", linetype = "dashed") +
-#geom_point(data = AR, aes(x = Tiempo, y = AR_Ensayo_3), color = "green", size = 3, label="13%") +
-#geom_smooth(data = AR, aes(x = Tiempo, y = AR_Ensayo_3), method = "lm", se = FALSE, color = "green", linetype = "dashed") +
-#labs(title = "Concentración de Azúcares Reductores vs Tiempo para diferentes concentraciones de almidón",
-#     x = "Tiempo (minutos)",
-#    y = "Concentración de Azúcares Reductores (g/L)") +
-#theme_minimal()
-
-
-# Calcular la pendiente usando un modelo lineal para cada concentración
-#modelo_2 <- lm(AR_Ensayo_1 ~ Tiempo, data = AR)
-#modelo_7 <- lm(AR_Ensayo_2 ~ Tiempo, data = AR)
-#modelo_13 <- lm(AR_Ensayo_3 ~ Tiempo, data = AR)
-
-modelo_2 <- lm(`AR 2%` ~ Tiempo, data = datos_filtrados_ar2)
-modelo_7 <- lm(`AR 7%` ~ Tiempo, data = datos_filtrados_ar7)
-modelo_13 <- lm(`AR 13%` ~ Tiempo, data = datos_filtrados_ar13)
-
-
-# 2 %
-plot(datos_filtrados_ar2$Tiempo, datos_filtrados_ar2$`AR 2%`, 
-     main = "Modelo Lineal de AR 2% vs Tiempo (sin outliers)", 
-     xlab = "Tiempo", 
-     ylab = "AR 2%", 
-     pch = 19)
-
-# Agregar la línea de tendencia
-abline(modelo_2, col = "blue")
-
-# Agregar la ecuación de la recta al gráfico
-eq_sin_outliers <- paste("y =", round(coef(modelo_2)[2], 2), "x +", round(coef(modelo_2)[1], 2))
-legend("topleft", legend = eq_sin_outliers, bty = "n", col = "blue", lwd = 2)
-
-# Calcular R^2
-r_squared <- summary(modelo_2)$r.squared
-r_squared_text <- paste("R² =", round(r_squared, 3))
-
-# Agregar solo R² al gráfico
-legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
-
-# 7 %
-# Graficar los datos sin outliers
-plot(datos_filtrados_ar7$Tiempo, datos_filtrados_ar7$`AR 7%`, 
-     main = "Modelo Lineal de AR 7% vs Tiempo (sin outliers)", 
-     xlab = "Tiempo", 
-     ylab = "AR 7%", 
-     pch = 19)
-
-# Agregar la línea de tendencia
-abline(modelo_7, col = "blue")
-
-# Agregar la ecuación de la recta al gráfico
-eq_filtrado <- paste("y =", round(coef(modelo_7)[2], 2), "x +", round(coef(modelo_7)[1], 2))
-legend("topleft", legend = eq_filtrado, bty = "n", col = "blue", lwd = 2)
-
-# Calcular R^2
-r_squared <- summary(modelo_7)$r.squared
-r_squared_text <- paste("R² =", round(r_squared, 3))
-
-# Agregar solo R² al gráfico
-legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
-
-# 13 %
-
-# Graficar los datos filtrados
-plot(datos_filtrados_ar13$Tiempo, datos_filtrados_ar13$`AR 13%`, 
-     main = "Modelo Lineal de AR 13% vs Tiempo (sin outliers)", 
-     xlab = "Tiempo", 
-     ylab = "AR 13%", 
-     pch = 19)
-
-# Agregar la línea de tendencia
-abline(modelo_13, col = "blue")
-
-# Crear la ecuación de la recta
-eq_filtrado <- paste("y =", round(coef(modelo_13)[2], 2), "x +", round(coef(modelo_13)[1], 2))
-
-# Agregar la ecuación al gráfico
-legend("topleft", legend = eq_filtrado, bty = "n", col = "blue", lwd = 2)
-
-# Calcular R^2
-r_squared <- summary(modelo_13)$r.squared
-r_squared_text <- paste("R² =", round(r_squared, 3))
-
-# Agregar solo R² al gráfico
-legend("bottomright", legend = r_squared_text, bty = "n", col = "blue", lwd = 2, cex = 0.8)
-
-# Mostrar los coeficientes del modelo (pendiente y ordenada al origen)
-summary(modelo_2)
-summary(modelo_7)
-summary(modelo_13)
-
-# Mezcla de las tres graficas
-ggplot() +
-  geom_point(data = datos_filtrados_ar2, aes(x = Tiempo, y = `AR 2%`), color = "blue", size = 3) +
-  geom_smooth(data = datos_filtrados_ar2, aes(x = Tiempo, y = `AR 2%`), method = "lm", se = FALSE, color = "blue", linetype = "dashed") +
-  geom_text(data = datos_filtrados_ar2, aes(x = Tiempo, y = `AR 2%`, label = "2%"), vjust = -1, color = "blue") +
-  
-  geom_point(data = datos_filtrados_ar7, aes(x = Tiempo, y = `AR 7%`), color = "red", size = 3) +
-  geom_smooth(data = datos_filtrados_ar7, aes(x = Tiempo, y = `AR 7%`), method = "lm", se = FALSE, color = "red", linetype = "dashed") +
-  geom_text(data = datos_filtrados_ar7, aes(x = Tiempo, y = `AR 7%`, label = "7%"), vjust = -1, color = "red") +
-  
-  geom_point(data = datos_filtrados_ar13, aes(x = Tiempo, y = `AR 13%`), color = "green", size = 3) +
-  geom_smooth(data = datos_filtrados_ar13, aes(x = Tiempo, y = `AR 13%`), method = "lm", se = FALSE, color = "green", linetype = "dashed") +
-  geom_text(data = datos_filtrados_ar13, aes(x = Tiempo, y = `AR 13%`, label = "13%"), vjust = -1, color = "green") +
-  
-  labs(title = "Concentración de Azúcares Reductores vs Tiempo",
-       x = "Tiempo (minutos)",
-       y = "Concentración de Azúcares Reductores (g/L)") +
-  theme_minimal()
-
-
-## Parte para la actividad enzimatica
-
-# Extraer la pendiente para cada concentración
-pendiente_2 <- coef(modelo_2)[2]
-pendiente_7 <- coef(modelo_7)[2]
-pendiente_13 <- coef(modelo_13)[2]
-
-# Parámetros adicionales para la actividad enzimática
-volumen_ensayo <- 1  # Volumen del ensayo en mL (ajustar si es diferente)
-coef_extincion_molar <- 6220  # Coeficiente de extinción molar para NADH (M^-1 cm^-1)
-distancia_celda <- 1  # Distancia de la celda del espectrofotómetro (cm)
-
-# Calcular la actividad enzimática (U.I.) para cada concentración
-actividad_enzimatica_2 <- (pendiente_2 * volumen_ensayo) / (coef_extincion_molar * distancia_celda)
-actividad_enzimatica_7 <- (pendiente_7 * volumen_ensayo) / (coef_extincion_molar * distancia_celda)
-actividad_enzimatica_13 <- (pendiente_13 * volumen_ensayo) / (coef_extincion_molar * distancia_celda)
-
-# Mostrar el valor de la actividad enzimática
-cat("Actividad enzimática para 2%: ", actividad_enzimatica_2, "U.I.\n")
-cat("Actividad enzimática para 7%: ", actividad_enzimatica_7, "U.I.\n")
-cat("Actividad enzimática para 13%: ", actividad_enzimatica_13, "U.I.\n")
-
-### Agregar modelo Lineweaver - Burk
-
-sustrato <- data$Sustrato
-
-# Datos de las velocidades iniciales
-velocidades_iniciales <- c(pendiente_2, pendiente_7, pendiente_13)
-
-# Calcular los valores de 1/V y 1/[S] para el gráfico de Lineweaver-Burk
-inv_velocidades <- 1 / velocidades_iniciales
-inv_sustrato <- 1 / sustrato
-
-
-# Ordenar los datos en función de los valores de 1/[S]
-orden <- order(inv_sustrato)
-inv_sustrato <- inv_sustrato[orden]
-inv_velocidades <- inv_velocidades[orden]
-
-# Realizar la regresión lineal de 1/V vs 1/[S]
-modelo_lineweaver_burk <- lm(inv_velocidades ~ inv_sustrato)
-
-# Obtener la pendiente (Km/Vmax) y la ordenada al origen (1/Vmax)
-pendiente <- coef(modelo_lineweaver_burk)[2] # Km/Vmax
-ordenada_origen <- coef(modelo_lineweaver_burk)[1] # 1/Vmax
-
-# Calcular Vmax y Km a partir de la pendiente y la ordenada al origen
-Vmax <- 1 / ordenada_origen
-Km <- pendiente * Vmax
-
-# Mostrar los resultados con las unidades
-cat("Vmax:", Vmax, "g/L*min\n")
-cat("Km:", Km, "g/L\n")
-
-# Generar la gráfica de Lineweaver-Burk
-plot(inv_sustrato, inv_velocidades, 
-     xlab = "1/[S] (1/g/L)", 
-     ylab = "1/V (min/L/g)", 
-     main = "Gráfica de Lineweaver-Burk", 
-     pch = 19, 
-     col = "blue")
-
-# Agregar la línea de regresión al gráfico
-abline(modelo_lineweaver_burk, col = "red")
-
-# Agregar leyenda con los valores de Vmax y Km
-legend("topright", legend = c(paste("Vmax:", round(Vmax, 4), "g/L*min"), paste("Km:", round(Km, 4), "g/L")),
-       col = c("red", "red"), lty = 1, bty = "n")
-
-
-# Asegúrate de tener el paquete 'renz' instalado y cargado
-# install.packages("renz")  # Si aún no está instalado
+library(dplyr)
+library(tidyr)
 library(renz)
 
-sustrato_limpio <- na.omit(data$Sustrato)
 
 
 
-# Datos de concentración de sustrato y velocidades iniciales (pendientes)
-datos <- data.frame(
-  sustrato = sustrato_limpio,                       # Concentraciones de sustrato en g/L
-  velocidad = c(pendiente_2, pendiente_7, pendiente_13)  # Velocidades iniciales en g/L*min
+## Data
+data <- read_excel("datos_absorbancia.xlsx")
+
+
+
+## Funciones
+
+# Definir la función para el análisis de la curva de calibración
+calibracion_glucosa_etanol <- function(concentraciones, absorbancias_calibracion, absorbancias_muestras) {
+  
+  # Verificar que los vectores de concentración y absorbancia de calibración tengan la misma longitud
+  if (length(concentraciones) != length(absorbancias_calibracion)) {
+    stop("Los vectores de 'concentraciones' y 'absorbancias_calibracion' deben tener la misma longitud.")
+  }
+  
+  # Crear el gráfico de la relación entre concentración y absorbancia de calibración
+  plot(concentraciones, absorbancias_calibracion,
+       main = "Curva de Calibración",
+       xlab = "Concentración (mg/L)",  # Especificar la unidad de concentración
+       ylab = "Absorbancia",
+       pch = 19, col = "darkslategray", # Cambiar a color gris oscuro
+       cex = 1.2) # Ajustar tamaño de los puntos
+  
+  # Ajustar un modelo de regresión lineal
+  modelo <- lm(absorbancias_calibracion ~ concentraciones)
+  
+  # Añadir la línea de regresión al gráfico
+  abline(modelo, col = "steelblue", lwd = 2) # Cambiar a azul acero
+  
+  # Obtener los coeficientes de la regresión y mostrar la fórmula en formato matemático
+  coeficientes <- coef(modelo)
+  eq_texto <- bquote(y == .(round(coeficientes[1], 3)) + .(round(coeficientes[2], 3)) * x)
+  text(x = max(concentraciones) * 0.6, y = max(absorbancias_calibracion) * 0.9, eq_texto, col = "steelblue", cex = 0.9)
+  
+  # Mostrar los parámetros ajustados del modelo
+  print(summary(modelo))
+  
+  # Generar gráficos de diagnóstico
+  par(mfrow = c(2, 2)) # Dividir la ventana gráfica en 2x2
+  plot(modelo)
+  
+  # Calcular concentraciones desconocidas a partir de absorbancias de las muestras
+  concentraciones_predichas <- (absorbancias_muestras - coeficientes[1]) / coeficientes[2]
+  
+  # Volver a la configuración de gráfico original
+  par(mfrow = c(1, 1))
+  
+  # Agregar puntos de las muestras desconocidas al gráfico de calibración
+  points(concentraciones_predichas, absorbancias_muestras, pch = 17, col = "darkolivegreen", cex = 1.2) 
+  
+  # Devolver las concentraciones predichas
+  return(concentraciones_predichas)
+}
+
+
+
+
+
+# Definir la función para calcular las velocidades iniciales y graficar cada ensayo
+calcular_velocidades_iniciales_por_ensayo <- function(df) {
+  # Detectar automáticamente los nombres de las columnas de concentración
+  columnas_concentracion <- names(df)[-1]  # Excluir la columna de Tiempo
+  
+  # Convertir los datos a formato largo
+  data_long <- df %>%
+    pivot_longer(cols = all_of(columnas_concentracion), 
+                 names_to = "Ensayo", values_to = "Concentracion") %>%
+    mutate(Ensayo = factor(Ensayo, levels = columnas_concentracion))
+  
+  # Crear un data frame para almacenar las velocidades iniciales
+  velocidades_iniciales <- data.frame(Ensayo = character(), Velocidad_Inicial = numeric())
+  
+  # Gráfico combinado de todos los ensayos con líneas de regresión
+  p_combinado <- ggplot(data_long, aes(x = Tiempo, y = Concentracion, color = Ensayo)) +
+    geom_point() +
+    labs(title = "Concentración vs Tiempo para los Ensayos",
+         x = "Tiempo (min)",
+         y = "Concentración (mg/L)") +
+    theme_minimal() +
+    scale_color_brewer(palette = "Set2") 
+  
+  # Graficar y calcular velocidades iniciales para cada ensayo
+  for (ensayo in unique(data_long$Ensayo)) {
+    ensayo_data <- data_long %>%
+      filter(Ensayo == ensayo, !is.na(Concentracion))
+    
+    if (nrow(ensayo_data) > 1) {  # Asegurarse de que haya suficientes puntos para la regresión
+      modelo <- lm(Concentracion ~ Tiempo, data = ensayo_data)
+      velocidad_inicial <- coef(modelo)[2]
+      
+      # Almacenar la velocidad inicial
+      velocidades_iniciales <- rbind(velocidades_iniciales, data.frame(Ensayo = ensayo, Velocidad_Inicial = velocidad_inicial))
+      
+      # Crear los datos de predicción con los mismos puntos de tiempo para asegurar compatibilidad
+      prediccion_data <- data.frame(Tiempo = ensayo_data$Tiempo, Concentracion = predict(modelo, newdata = ensayo_data))
+      
+      # Gráfico del ensayo individual
+      p_individual <- ggplot(ensayo_data, aes(x = Tiempo, y = Concentracion)) +
+        geom_point(color = "steelblue") +
+        geom_line(data = prediccion_data, aes(y = Concentracion), linetype = "dotted", color = "darkblue") +
+        labs(title = paste("Concentración vs Tiempo -", ensayo),
+             x = "Tiempo (min)",
+             y = "Concentración (mg/L)") +
+        annotate("text", x = max(df$Tiempo) * 0.6, 
+                 y = max(ensayo_data$Concentracion, na.rm = TRUE) * 1.1, 
+                 label = paste0("y = ", round(coef(modelo)[1], 3), " + ", round(velocidad_inicial, 3), " * x"), 
+                 color = "black", size = 4, hjust = 0) +  # Ajustar posición de la ecuación
+        theme_minimal()
+      
+      print(p_individual)  # Mostrar el gráfico individual
+      
+      # Añadir la línea de regresión al gráfico combinado
+      p_combinado <- p_combinado + 
+        geom_line(data = prediccion_data, aes(y = Concentracion), linetype = "dotted", color = "grey50")
+    }
+  }
+  
+  # Mostrar el gráfico combinado
+  print(p_combinado)
+  
+  # Devolver las velocidades iniciales
+  return(velocidades_iniciales)
+}
+
+
+
+
+
+
+
+
+# Definir la función para el análisis de cinética de Michaelis-Menten
+analizar_cinetica_MM <- function(sustrato, velocidades) { 
+  # Verificar que ambos vectores tengan la misma longitud
+  if (length(sustrato) != length(velocidades)) {
+    stop("Los vectores de 'sustrato' y 'velocidades' deben tener la misma longitud.")
+  }
+  
+  # Crear un data frame a partir de los vectores de sustrato y velocidades
+  data_velocidades <- data.frame(Concentracion = sustrato, Velocidad_Inicial = velocidades)
+  
+  # Verificar que el data frame contiene las columnas necesarias
+  if (!all(c("Concentracion", "Velocidad_Inicial") %in% colnames(data_velocidades))) { 
+    stop("El data frame debe contener las columnas 'Concentracion' y 'Velocidad_Inicial'.") 
+  }
+  
+  # Comprobar si hay valores NA y lanzar advertencia si existen
+  if (any(is.na(data_velocidades))) {
+    warning("Se encontraron valores NA en los datos. Los cálculos se realizarán con los valores disponibles.")
+  }
+  
+  # Convertir el data frame a formato compatible con renz
+  datos <- data_velocidades %>% 
+    rename(S = Concentracion, v = Velocidad_Inicial) 
+  
+  # Calcular los parámetros cinéticos usando Michaelis-Menten
+  resultados_MM <- dir.MM(datos, unit_S = 'mg/L', unit_v = 'mg/L*min') 
+  
+  # Verificar si se obtuvieron resultados válidos
+  if (is.null(resultados_MM$parameters)) {
+    stop("No se pudieron calcular Vmax y Km. Verifica los datos de entrada.")
+  }
+  
+  # Devolver los resultados en una lista
+  return(resultados_MM$parameters) 
+}
+
+
+
+
+
+
+
+# Generar datos de ejemplo para la curva de calibración
+set.seed(123) # Para reproducibilidad
+concentraciones <- c(0, 50, 100, 150, 200, 250) # Concentraciones en mg/L
+
+# Generar absorbancias de calibración como un vector
+absorbancias_calibracion <- c(0.02, 0.12, 0.21, 0.31, 0.4, 0.52) # Absorbancias correspondientes
+
+# Generar absorbancias de muestras desconocidas como un vector
+absorbancias_muestras <- c(0.45, 0.65, 0.35, 0.75)
+
+# Ejecutar la función con los datos de prueba
+concentraciones_muestras<- calibracion_glucosa_etanol(concentraciones, absorbancias_calibracion, absorbancias_muestras)
+
+# Ver las concentraciones predichas
+print(concentraciones_muestras)
+
+
+
+# Datos de entrada para probar la función
+Tiempo <- c(0, 30, 60, 90, 120, 150)  # Tiempo en minutos
+concentraciones_2 <- c(0.391, 9.211, 12.488, 13.675, NA, 19.095)  # Concentraciones ensayo 1
+concentraciones_7 <- c(0.173, NA, NA, 30.644, 32.156, 35.285)     # Concentraciones ensayo 2
+concentraciones_13 <- c(3.107, NA, NA, 39.466, 43.469, 53.671)    # Concentraciones ensayo 3
+
+df <- data.frame(
+  Tiempo = Tiempo,
+  Concentraciones_2 = concentraciones_2,
+  Concentraciones_7 = concentraciones_7,
+  Concentraciones_13 = concentraciones_13
 )
 
+# Llamada a la función
+velocidades <- calcular_velocidades_iniciales_por_ensayo(df)
+
+# Ver el resultado de las velocidades iniciales
+print(velocidades)
 
 
 
-# Lineweaver - Burk
-# Aplicar la función lb() para obtener Vmax y Km usando regresión ponderada
-resultados_lb <- lb(datos, unit_S = 'g/L', unit_v = 'g/L*min')
+Sustrato <- c(20, 70, 130)
 
-# Imprimir los resultados
-cat("Vmax estimado:", resultados_lb$Vm, "\n")
-cat("Km estimado:", resultados_lb$Km, "\n")
+# Llamar a la función con los vectores sustrato y velocidades
+resultados <- analizar_cinetica_MM(Sustrato, velocidades$Velocidad_Inicial)
 
-
+# Mostrar los resultados
+print(resultados)
 
 
+sE.progress(So = 20, time = 150, Km = 82.202, Vm = 0.544, unit_S = 'mg', unit_t = 'min')
 
-# Eadie-Hofstee
-# Aplicar la función eh() para obtener Vmax y Km usando regresión ponderada
-resultados_eh <- eh(datos, unit_S = 'g/L', unit_v = 'g/L*min', plot = FALSE) # Generar sin gráfica automática
-
-# Calcular los valores de v y v/[S]
-v <- datos$v
-v_over_S <- v / datos$s
-
-# Calcular los límites automáticos basados en los valores mínimos y máximos de v/[S] y v
-xlim_vals <- range(v_over_S) * c(0.9, 1.1)  # Margen del 10% para el eje x
-ylim_vals <- range(v) * c(0.9, 1.1)  # Margen del 10% para el eje y
-
-# Graficar manualmente los puntos y la línea de regresión
-plot(v_over_S, v, 
-     xlab = "v/[S] (g/L)", 
-     ylab = "v (g/L*min)", 
-     pch = 19, col = "blue", xlim = xlim_vals, ylim = ylim_vals)
-
-# Ajustar un modelo de regresión lineal
-modelo_eh <- lm(v ~ v_over_S)
-
-# Extraer los coeficientes
-intercepto <- coef(modelo_eh)[1]
-pendiente <- coef(modelo_eh)[2]
-
-# Agregar la línea de regresión al gráfico
-abline(modelo_eh, col = "red")
-
-# Agregar título usando mtext()
-mtext("Gráfica de Eadie-Hofstee", side = 3, line = 3, cex = 1.5, col = "black")
-
-# Imprimir Vmax y Km en la parte superior del gráfico
-mtext(paste("Km:", round(resultados_eh$Km, 2)), side = 3, line = 1, adj = 0, cex = 1.2, col = "black")
-mtext(paste("Vm:", round(resultados_eh$Vm, 2)), side = 3, line = 1, adj = 1, cex = 1.2, col = "black")
-
-# Mostrar la ecuación de la recta en el gráfico
-eq_text <- paste("y =", round(intercepto, 2), "+", round(pendiente, 2), "* x")
-text(x = mean(v_over_S), y = max(v) * 0.9, labels = eq_text, col = "black")
-
-# Mostrar los resultados calculados
-cat("Ecuación de la recta: ", eq_text, "\n")
-cat("Vmax estimado:", resultados_eh$Vm, "g/L*min\n")
-cat("Km estimado:", resultados_eh$Km, "g/L\n")
+data <- sE.progress(So = 20, time = 150, Km = 82.202, Vm = 0.544, unit_S = 'mg', unit_t = 'min', plot = FALSE)
+fE.progress(data)
 
 
-
-# Hanes-Woolf
-resultados_hw <- hw(datos, unit_S = 'g/L', unit_v = 'g/L*min')
-
-# Imprimir los resultados
-cat("Vmax estimado:", resultados_hw$Vm, "\n")
-cat("Km estimado:", resultados_hw$Km, "\n")
-
-
-
-resultados_MM <- dir.MM(datos, unit_S = 'g/L', unit_v = 'g/L*min')
-
-cat("Vmax estimado:", resultados_MM$Vm, "\n")
-cat("Km estimado:", resultados_MM$Km, "\n")
-
-
-# Etanol
-data$Etanol_2 <- 14.89 * data$`Abs Etanol 2%` + 0.1563
-data$Etanol_7 <- 14.89 * data$`Abs Etanol 7%` + 0.1563
-data$Etanol_13 <- 14.89 * data$`Abs Etanol 13%` + 0.1563
-
-
-
-# Calcular la correlación entre AR y Etanol 
-cor_2 <- cor(data$`AR 2%`, data$Etanol_2, use = "complete.obs")
-cor_7 <- cor(data$`AR 7%`, data$Etanol_7, use = "complete.obs")
-cor_13 <- cor(data$`AR 7%`, data$Etanol_13, use = "complete.obs")
+# Nuestra salvacion 
+nuevo_dataframe <- data[, 1:2]
+fE.progress(nuevo_dataframe)
 
 
 
 
-#install.packages("tidyr")
-library(tidyr)
+# Validación
 
-
-# Crear un dataframe largo para el gráfico
-datos_long <- pivot_longer(data, 
-                           cols = c(`AR 2%`, `AR 7%`, `AR 13%`, Etanol_2, Etanol_7, Etanol_13), 
-                           names_to = "Variable", 
-                           values_to = "Concentracion")
-
-
-# Crear el gráfico con dos ejes Y
-ggplot(datos_long, aes(x = Tiempo)) +
-  geom_line(data = subset(datos_long, grepl("AR", Variable)), 
-            aes(y = Concentracion, color = Variable), linetype = "solid") +
-  geom_line(data = subset(datos_long, grepl("Etanol", Variable)), 
-            aes(y = Concentracion, color = Variable), linetype = "dashed") +
-  scale_color_manual(values = c('AR 2%' = 'blue', 
-                                'AR 7%' = 'orange', 
-                                'AR 13%' = 'red', 
-                                'Etanol_2' = 'green', 
-                                'Etanol_7' = 'purple', 
-                                'Etanol_13' = 'brown'),
-                     name = "Variables") +
-  scale_y_continuous(name = "Concentración de AR", 
-                     sec.axis = sec_axis(~., name = "Concentración de Etanol")) +
-  labs(title = "Concentraciones de AR y Etanol en función del Tiempo",
-       x = "Tiempo (min)") +
-  theme_minimal() +
-  theme(legend.position = "right")
-
+# Vectores de sustrato y velocidades
+sustrato <- c(0.010, 0.015, 0.020, 0.025, 0.030)
+v1 <- c(0.00002134, 0.00002997, 0.00003981, 0.00005494, 0.00005996)
+v2 <- c(0.0000764, 0.0000995, 0.0001231, 0.0001452, 0.0001769)
+v3 <- c(0.0000858, 0.0000920, 0.0000955, 0.0000978, 0.0000980)
 
 
