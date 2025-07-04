@@ -1,0 +1,65 @@
+---
+title: "Reporte de Análisis de Etanol"
+author: "Tu Nombre"
+date: "`r Sys.Date()`"
+output: pdf_document
+params:
+  tabla_resultados: NULL
+  texto_parametros: NULL
+  plot_absorbancia_etanol_file: NULL
+  plot_absorbancia_tiempo_file: NULL
+---
+
+# Resultados Tabulados
+
+```{r, echo=FALSE}
+knitr::kable(params$tabla_resultados)
+
+cat(params$texto_parametros)
+knitr::include_graphics(params$plot_absorbancia_etanol_file)
+knitr::include_graphics(params$plot_absorbancia_tiempo_file)
+
+
+### 2. Implementar la Función de Descarga en el Servidor
+
+En el servidor de tu aplicación Shiny, debes implementar la lógica para generar el reporte cuando el usuario haga clic en el botón de descarga. Aquí está el código que puedes agregar a la sección del servidor:
+
+```r
+output$downloadReport <- downloadHandler(
+  filename = function() {
+    paste0("reporte_analisis_etanol_", Sys.Date(), ".pdf")
+  },
+  content = function(file) {
+    # Muestra notificación al usuario
+    showNotification("Generando reporte en PDF, por favor espere...", duration = 10, type = "message")
+    
+    # Capturar todos los datos en variables locales
+    tabla_data <- resultados_formateados()
+    analisis_data <- datos_procesados()
+    params_texto <- sprintf("Actividad máxima (A_max) = %.2f g/L\nTiempo óptimo (t_opt) = %.1f min\n",
+                            max(analisis_data$df_final$Promedio_Concentracion, na.rm = TRUE),
+                            analisis_data$df_final$Tiempo_fermentacion[which.max(analisis_data$df_final$Promedio_Concentracion)])
+    
+    plot_absorbancia_etanol_path <- file.path(tempdir(), "plot_absorbancia_etanol.png")
+    ggsave(filename = plot_absorbancia_etanol_path, plot = output$plotAbsorbanciaEtanol(), device = "png", width = 7, height = 5, dpi = 300)
+    
+    plot_absorbancia_tiempo_path <- file.path(tempdir(), "plot_absorbancia_tiempo.png")
+    ggsave(filename = plot_absorbancia_tiempo_path, plot = output$plotAbsorbanciaTiempo(), device = "png", width = 7, height = 5, dpi = 300)
+    
+    # Preparar la lista de parámetros para el reporte
+    params <- list(
+      tabla_resultados = tabla_data,
+      texto_parametros = params_texto,
+      plot_absorbancia_etanol_file = "plot_absorbancia_etanol.png",
+      plot_absorbancia_tiempo_file = "plot_absorbancia_tiempo.png"
+    )
+    
+    # Renderizar el reporte
+    rmarkdown::render(
+      input = "reporte_template.Rmd",  # Ruta a la plantilla
+      output_file = file,                # Archivo final de salida
+      params = params,
+      envir = new.env(parent = globalenv())
+    )
+  }
+)
