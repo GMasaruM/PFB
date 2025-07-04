@@ -12,6 +12,7 @@ params:
   factor_dilucion: 0
   tiempo_reaccion: 0
 ---
+<<<<<<< HEAD
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(knitr)
@@ -19,23 +20,79 @@ library(kableExtra)
 # Leer la tabla de resultados
 if (!is.na(params$tabla_resultados) && nrow(params$tabla_resultados) > 0) {
   df <- params$tabla_resultados
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(knitr) 
+
+
+
+if (!is.na(params$tabla_resultados)) {
+  df <- read.csv(params$tabla_resultados)
+
   kable(df, caption = "Tabla de resultados de actividad enzimática") %>%
     kable_styling(latex_options = "striped", full_width = FALSE)
 } else {
   cat("No se cargó ninguna tabla de resultados.")
 }
+
 # Mostrar parámetros estimados
 cat("**Parámetros estimados:**\n\n")
 cat(params$texto_parametros)
 # Mostrar gráfico de actividad
 if (!is.na(params$plot_actividad_file) && file.exists(params$plot_actividad_file)) {
+
+
+
+
+
+
+cat("**Parámetros estimados:**\n\n")
+cat(params$texto_parametros)
+
+
+
+if (!is.na(params$plot_actividad_file)) {
+
   knitr::include_graphics(params$plot_actividad_file)
 } else {
   cat("Gráfico de actividad no disponible.")
 }
+
 # Mostrar gráfico de decaimiento
 if (!is.na(params$plot_decaimiento_file) && file.exists(params$plot_decaimiento_file)) {
+
+
+
+
+if (!is.na(params$plot_decaimiento_file)) {
+
   knitr::include_graphics(params$plot_decaimiento_file)
 } else {
   cat("Gráfico de decaimiento no disponible.")
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> b9a30be (tania)
