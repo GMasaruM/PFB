@@ -1,4 +1,3 @@
-# Archivo: app_final.R
 library(shiny)
 library(ggplot2)
 library(dplyr)
@@ -175,6 +174,5 @@ server <- function(input, output, session) {
     }
   )
 }
+
 shinyApp(ui = ui, server = server)
-
-
