@@ -52,12 +52,60 @@ filtrar_datos <- function(data, variable) {
 
 
 
+# Validación
+
+# Vectores de sustrato y velocidades
+sustrato <- c(0.05, 0.10, 0.25, 0.50, 1.00, 2.50, 5.00, 8.00, 20.0, 30.0)
+sustrato_p <- c(0.05, 0.10, 0.25, 0.50, 1.00, 2.50, 5.00, 20.0, 30.0)
+
+v1 <- c(2.3, 5.5, 13.4, 24.7, 40.9, 62.3, 94.3, 105.0, 133.0, 144.0)
+v2 <- c(1.3, 3.3, 11.8, 22.8, 35.2, 39.9, 73.5, 112.0, 120.0)
+v3 <- c(4.0, 8.0, 20.0, 35.0, 60.0, 110.0, 138.0, 154.0, 179.0, 200.0)
+v4 <- c(4.0, 7.0, 20.0, 35.0, 56.0, 104.0, 138.0, 150.0, 179.0, 200.0)
+v5 <- c(4.0, 7.0, 16.0, 32.0, 50.0, 90.0, 115.0, 119.0, 142.0, 166.0)
+v6 <- c(3.0, 6.0, 17.0, 31.0, 48.0, 101.0, 121.0, 139.0, 152.0, 181.0)
+v7 <- c(1.8, 5.2, 15.0, 28.3, 51.0, 75.4, 112.7, 126.1, 154.9, 168.8)
+v8 <- c(3.0, 5.2, 14.4, 30.3, 49.0, 86.3, 112.6, 136.2, 170.0, 177.7)
+
+
+
+
+
+
+# Configurar la disposición de los gráficos en 2x2
+par(mfrow = c(2, 2), mar = c(2, 2, 2, 1))
+
+# Generar las 4 gráficas de Michaelis-Menten
+analizar_cinetica_MM(sustrato, v5)
+analizar_cinetica_MM(sustrato, v6)
+analizar_cinetica_MM(sustrato, v7)
+analizar_cinetica_MM(sustrato, v8)
+
+# Crear un data frame con los resultados simulados y experimentales
+resultados_df <- data.frame(
+  Grupo = 1:8,
+  Km_simulado = NA,
+  Vmax_simulado = NA,
+  Km_experimental = c(3.2, 3.1, 2.4, 2.7, 2.4, 2.5, 3.0, 3.2),
+  Vmax_experimental = c(155.7, 129.8, 208.2, 209.6, 169.6, 186.4, 180.3, 195.2)
+)
+
+# Generar los resultados simulados usando la función analizar_cinetica_MM()
+for (i in 1:8) {
+  if (i == 2) {
+    resultados <- analizar_cinetica_MM(sustrato_p, get(paste0("v", i)))
+  } else {
+    resultados <- analizar_cinetica_MM(sustrato, get(paste0("v", i)))
+
+
+
 
 
 filtrar_datos_multi <- function(data, variable1, variable2) {
   # Verificar que las variables están en el dataframe
   if (!variable1 %in% colnames(data)) {
     stop(paste("La variable", variable1, "no se encuentra en el dataframe."))
+
   }
   if (!variable2 %in% colnames(data)) {
     stop(paste("La variable", variable2, "no se encuentra en el dataframe."))

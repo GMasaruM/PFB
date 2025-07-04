@@ -23,15 +23,15 @@ if (!is.na(params$tabla_resultados) && nrow(params$tabla_resultados) > 0) {
 
 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-library(knitr)
-library(kableExtra)
-# Leer la tabla de resultados
+
+
 if (!is.na(params$tabla_resultados)) {
 
   df <- read.csv(params$tabla_resultados)
 
+
+
+if (!is.na(params$tabla_resultados) && nrow(params$tabla_resultados) > 0) {
 
   df <- params$tabla_resultados
 
@@ -41,24 +41,6 @@ if (!is.na(params$tabla_resultados)) {
   cat("No se cargó ninguna tabla de resultados.")
 }
 
-
-# Mostrar parámetros estimados
-cat("**Parámetros estimados:**\n\n")
-cat(params$texto_parametros)
-# Mostrar gráfico de actividad
-if (!is.na(params$plot_actividad_file) && file.exists(params$plot_actividad_file)) {
-
-
-
-
-
-
-cat("**Parámetros estimados:**\n\n")
-cat(params$texto_parametros)
-
-
-
-if (!is.na(params$plot_actividad_file)) {
 
 
 # Mostrar parámetros estimados
@@ -78,7 +60,6 @@ if (!is.na(params$plot_decaimiento_file) && file.exists(params$plot_decaimiento_
 
 
 
-
 if (!is.na(params$plot_decaimiento_file)) {
 
   knitr::include_graphics(params$plot_decaimiento_file)
@@ -88,31 +69,4 @@ if (!is.na(params$plot_decaimiento_file)) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Mostrar gráfico de decaimiento
-if (!is.na(params$plot_decaimiento_file) && file.exists(params$plot_decaimiento_file)) {
-  knitr::include_graphics(params$plot_decaimiento_file)
-} else {
-  cat("Gráfico de decaimiento no disponible.")
-}
 
