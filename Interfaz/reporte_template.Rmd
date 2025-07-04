@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(knitr)
 library(kableExtra)
 # Leer la tabla de resultados
-if (!is.na(params$tabla_resultados)) {
+if (!is.na(params$tabla_resultados) && nrow(params$tabla_resultados) > 0) {
   df <- params$tabla_resultados
   kable(df, caption = "Tabla de resultados de actividad enzimática") %>%
     kable_styling(latex_options = "striped", full_width = FALSE)

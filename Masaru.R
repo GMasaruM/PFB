@@ -50,6 +50,10 @@ filtrar_datos <- function(data, variable) {
   return(datos_filtrados)  # Devolver el dataframe filtrado
 }
 
+
+
+
+
 filtrar_datos_multi <- function(data, variable1, variable2) {
   # Verificar que las variables están en el dataframe
   if (!variable1 %in% colnames(data)) {
