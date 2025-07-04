@@ -1,5 +1,7 @@
 
+
 # Archivo: app_final.R
+
 
 library(shiny)
 library(ggplot2)
@@ -177,12 +179,15 @@ server <- function(input, output, session) {
     }
   )
 }
-<<<<<<< HEAD
+
 
 shinyApp(ui = ui, server = server)
 
-=======
+
 shinyApp(ui = ui, server = server)
 
 
->>>>>>> b9a30be (tania)
+
+
+shinyApp(ui = ui, server = server)
+
