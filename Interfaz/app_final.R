@@ -1,8 +1,5 @@
 
 
-# Archivo: app_final.R
-
-
 library(shiny)
 library(ggplot2)
 library(dplyr)
@@ -11,7 +8,7 @@ library(rmarkdown)
 library(knitr)
 
 ui <- fluidPage(
-  titlePanel("Análisis de Actividad de α-amilasa"),
+  titlePanel("Análisis de Actividad de α-amilas"),
   sidebarLayout(
     sidebarPanel(
       h4("1. Carga de Datos"),
@@ -180,6 +177,7 @@ server <- function(input, output, session) {
   )
 }
 
-
-
 shinyApp(ui = ui, server = server)
+
+
+
