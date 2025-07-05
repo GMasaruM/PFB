@@ -4,12 +4,9 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 # rmarkdown y knitr son necesarios para el downloadHandler,
-# pero no directamente para la ejecución reactiva en el módulo,
-# se cargan en el entorno del downloadHandler.
+# pero se cargan en el entorno del downloadHandler.
 library(stringr) # Necesario para str_extract
 library(patchwork) # Para combinar gráficos de decaimiento si hay múltiples grupos
-# plotly no es necesario si todas las gráficas son ggplot estáticas,
-# como en el ejemplo de amilasa que proporcionaste.
 
 amilasaUI <- function(id) {
   ns <- NS(id) # Crear el namespace para los IDs
@@ -33,9 +30,9 @@ amilasaUI <- function(id) {
     ),
     mainPanel(
       tabsetPanel(
-        id = ns("tabs"),
+        id = ns("tabs"), # ID del tabsetPanel
         tabPanel("Resultados Tabulados", h4("Resultados de Actividad Enzimática por Grupo"), uiOutput(ns("resultados_tabulados_ui"))),
-        tabPanel("Parámetros Cinéticos", h4("Parámetros Cinéticos Estimados por Grupo"), verbatimTextOutput(ns("parametros_cineticos"))),
+        tabPanel("Parámetros Cinéticos", h4("Parámetros Cinéticos Estimados por Grupo"), verbatimTextOutput(ns("parametros_cineticos"))), # ID actualizado
         tabPanel("Gráficas",
                  # Controles específicos para cada gráfica
                  fluidRow(
@@ -68,7 +65,7 @@ amilasaUI <- function(id) {
         )
       ),
       hr(),
-      uiOutput(ns("download_button_ui"))
+      uiOutput(ns("download_button_ui")) # ID del UI para el botón de descarga
     )
   )
 }
@@ -176,7 +173,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
         
         tagList(
           h5(paste("Grupo de Muestras:", g), style = "font-weight: bold;"),
-          renderTable(df_grupo, striped = TRUE, hover = TRUE, bordered = TRUE)
+          renderTable(df_grupo, striped = TRUE, hover = TRUE, bordered = TRUE) # Añadidas opciones de tabla
         )
       })
     })
@@ -256,7 +253,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
         paste(collapse = "\n") # Unir todos los textos de los grupos
     })
     
-    output$parametros_cineticos <- renderPrint({
+    output$parametros_cineticos <- renderPrint({ # ID actualizado
       cat(parametros_cineticos_por_grupo())
     })
     
@@ -294,11 +291,11 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
         return(ggplot() + annotate("text", x=0.5, y=0.5, label="Selecciona grupo(s) para visualizar.", size=6, color="gray") + theme_void())
       }
       
-      p <- ggplot(df_plot, aes(x = Tiempo_fermentacion_h, y = Promedio_U_L, color = Grupo, group = Grupo)) +
+      p <- ggplot(df_plot, aes(x = Tiempo_fermentacion_h, y = Promedio_U_L, color = Grupo, group = Grupo)) + # Tiempo en horas
         geom_line(size = 1) +
         geom_point(size = 4, alpha = 0.8) +
         labs(title = "Gráfica de Actividad vs. Tiempo",
-             x = "Tiempo (horas)", # Cambiado a horas para consistencia
+             x = "Tiempo (horas)", # Cambiado a horas
              y = "Actividad Promedio (U/L)") +
         theme_minimal(base_size = 14) +
         theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
@@ -362,7 +359,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
                         theme_minimal(base_size = 14) +
                         theme(plot.title = element_text(hjust = 0.5))
                     } else {
-                      plot_dec <- ggplot() + annotate("text", x=0.5, y=0.5, label="No se calculó k o t1/2 (k o A_max no positivos).", size=4, color="gray") + theme_void() + ggtitle(paste("Decaimiento 2º Orden - Grupo", g)) + theme(plot.title = element_text(hjust = 0.5))
+                      plot_dec <- ggplot() + annotate("text", x=0.5, y=0.5, label="No se pudo calcular k o t1/2 (k o A_max no positivos).", size=4, color="gray") + theme_void() + ggtitle(paste("Decaimiento 2º Orden - Grupo", g)) + theme(plot.title = element_text(hjust = 0.5))
                     }
                   } else {
                     plot_dec <- ggplot() + annotate("text", x=0.5, y=0.5, label="No se pudo ajustar el modelo de decaimiento de 2º orden.", size=4, color="gray") + theme_void() + ggtitle(paste("Decaimiento 2º Orden - Grupo", g)) + theme(plot.title = element_text(hjust = 0.5))
@@ -415,13 +412,13 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
         OD_blanco_promedio_report  <- mean(od_blanco_df_report$od, na.rm = TRUE)
         OD_estandar_promedio_report <- mean(od_estandares_df_report$od, na.rm = TRUE)
         
-        
         # 2. CREAR un directorio temporal para TODOS los archivos (plantilla e imágenes).
         temp_dir <- tempdir()
         
         # 3. COPIAR la plantilla a este directorio temporal.
         # (Se asume que 'reporte_template_amilasa.Rmd' estará en el mismo directorio que 'app.R')
         temp_template_path <- file.path(temp_dir, "reporte_template_amilasa.Rmd")
+        # Asegúrate de crear este archivo Rmd si aún no existe.
         file.copy("reporte_template_amilasa.Rmd", temp_template_path, overwrite = TRUE)
         
         # 4. PREPARAR la lista de parámetros para el reporte.
