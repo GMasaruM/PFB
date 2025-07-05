@@ -4,11 +4,21 @@
 library(shiny)
 library(dplyr)
 library(tidyr)
+<<<<<<< HEAD
 library(ggplot2)
 library(plotly)
 library(patchwork)
 library(stringr)
 library(bslib)
+=======
+# Para la curva de calibración interactiva
+library(plotly) # Necesario para los gráficos de los módulos
+library(stringr) # Necesario para str_extract
+library(patchwork) # Para combinar gráficos de consumo si hay múltiples grupos
+# modulo_integrado.R
+
+library(scales) # Para labeller con scales
+>>>>>>> 2b849ae30aa0a916cdae7c20192e42ce6a995418
 
 # --- Cargar los archivos de los módulos ---
 source("modulo_glucosa.R")
