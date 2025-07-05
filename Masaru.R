@@ -42,6 +42,11 @@ analizar_cinetica_MM <- function(sustrato, velocidades) {
   return(resultados_MM$parameters) 
 }
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> f84f71cc49fab1706e250dd773d6dddc7bf98eb0
 # Validación
 
 # Vectores de sustrato y velocidades
@@ -58,6 +63,7 @@ v7 <- c(1.8, 5.2, 15.0, 28.3, 51.0, 75.4, 112.7, 126.1, 154.9, 168.8)
 v8 <- c(3.0, 5.2, 14.4, 30.3, 49.0, 86.3, 112.6, 136.2, 170.0, 177.7)
 
 
+<<<<<<< HEAD
 # Configurar la disposición de los gráficos en 2x2
 par(mfrow = c(2, 2), mar = c(2, 2, 2, 1))
 
@@ -66,6 +72,11 @@ analizar_cinetica_MM(sustrato, v1)
 analizar_cinetica_MM(sustrato_p, v2)
 analizar_cinetica_MM(sustrato, v3)
 analizar_cinetica_MM(sustrato, v4)
+=======
+
+
+
+>>>>>>> f84f71cc49fab1706e250dd773d6dddc7bf98eb0
 
 # Configurar la disposición de los gráficos en 2x2
 par(mfrow = c(2, 2), mar = c(2, 2, 2, 1))
@@ -91,6 +102,19 @@ for (i in 1:8) {
     resultados <- analizar_cinetica_MM(sustrato_p, get(paste0("v", i)))
   } else {
     resultados <- analizar_cinetica_MM(sustrato, get(paste0("v", i)))
+<<<<<<< HEAD
+=======
+
+
+
+
+
+filtrar_datos_multi <- function(data, variable1, variable2) {
+  # Verificar que las variables están en el dataframe
+  if (!variable1 %in% colnames(data)) {
+    stop(paste("La variable", variable1, "no se encuentra en el dataframe."))
+
+>>>>>>> f84f71cc49fab1706e250dd773d6dddc7bf98eb0
   }
   resultados_df$Km_simulado[i] <- resultados["Km"]
   resultados_df$Vmax_simulado[i] <- resultados["Vm"]
