@@ -264,6 +264,7 @@ server <- function(input, output, session) {
     }
     
     # Ordenar los datos por Grupo y luego por Absorbancia_Neta para que la línea se dibuje correctamente
+    # Esto es crucial para que la geom_line conecte los puntos en el orden deseado (por Absorbancia)
     df_plot_ordered <- df_plot %>% arrange(Grupo, Absorbancia_Neta)
     
     ggplot(df_plot_ordered, aes(x = Absorbancia_Neta, y = Promedio_U_L, color = Grupo)) +
@@ -297,6 +298,7 @@ server <- function(input, output, session) {
     # Mostrar desviación estándar si el usuario lo desea y si hay datos válidos para SD
     if (input$plotAct_show_sd) {
       # Filtra NAs para SD, ya que ggplot lanzaría warnings si hay NA en SD_U_L
+      # Esta geom_errorbar se aplica a TODOS los puntos en df_plot que cumplen la condición
       p <- p + geom_errorbar(data = df_plot %>% filter(!is.na(SD_U_L) & SD_U_L >= 0),
                              aes(ymin = Promedio_U_L - SD_U_L, ymax = Promedio_U_L + SD_U_L), width = 0.2, alpha = 0.5)
     }
