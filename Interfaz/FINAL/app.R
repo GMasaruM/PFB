@@ -7,6 +7,9 @@ library(tidyr)
 library(plotly) # Necesario para los gráficos de los módulos
 library(stringr) # Necesario para str_extract
 library(patchwork) # Para combinar gráficos de consumo si hay múltiples grupos
+# modulo_integrado.R
+
+library(scales) # Para labeller con scales
 
 
 
