@@ -3,8 +3,6 @@ library(shiny)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-# rmarkdown y knitr son necesarios para el downloadHandler,
-# pero se cargan en el entorno del downloadHandler.
 library(stringr) # Necesario para str_extract
 library(patchwork) # Para combinar gráficos de decaimiento si hay múltiples grupos
 
@@ -32,7 +30,7 @@ amilasaUI <- function(id) {
       tabsetPanel(
         id = ns("tabs"), # ID del tabsetPanel
         tabPanel("Resultados Tabulados", h4("Resultados de Actividad Enzimática por Grupo"), uiOutput(ns("resultados_tabulados_ui"))),
-        tabPanel("Parámetros Cinéticos", h4("Parámetros Cinéticos Estimados por Grupo"), verbatimTextOutput(ns("parametros_cineticos"))), # ID actualizado
+        tabPanel("Parámetros Cinéticos", h4("Parámetros Cinéticos Estimados por Grupo"), uiOutput(ns("parametros_cineticos_ui"))), # Cambiado a uiOutput
         tabPanel("Gráficas",
                  # Controles específicos para cada gráfica
                  fluidRow(
@@ -63,9 +61,7 @@ amilasaUI <- function(id) {
                  h4("Gráfica de Decaimiento Enzimático"),
                  plotOutput(ns("plotDecay"), height = "400px")
         )
-      ),
-      hr(),
-      uiOutput(ns("download_button_ui")) # ID del UI para el botón de descarga
+      )
     )
   )
 }
@@ -184,14 +180,23 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       df <- datos_procesados()
       
       # Calcular parámetros cinéticos por cada grupo
-      df %>%
+      all_params_df <- df %>%
         group_by(Grupo) %>%
         do({
           df_grupo <- . # Los datos del grupo actual
-          text_output <- paste0("\n--- Grupo: ", unique(df_grupo$Grupo), " ---\n")
+          grupo_actual <- unique(df_grupo$Grupo)
+          
+          # Inicializar un data.frame temporal para los parámetros de este grupo
+          params_df_temp <- data.frame(Parámetro = character(), Valor = character(), stringsAsFactors = FALSE)
+          
+          # Función auxiliar para añadir filas de parámetros
+          add_param_row <- function(df, param_name, param_value, format_string = "%.3f") {
+            new_row <- data.frame(Parámetro = param_name, Valor = sprintf(format_string, param_value), stringsAsFactors = FALSE)
+            bind_rows(df, new_row)
+          }
           
           if(nrow(df_grupo) < 3) {
-            text_output <- paste0(text_output, "Se necesitan al menos 3 puntos de datos para el ajuste cinético en este grupo.\n")
+            params_df_temp <- add_param_row(params_df_temp, "Nota", "Se necesitan al menos 3 puntos de datos para el ajuste cinético en este grupo.", "%s")
           } else {
             # Modelo cuadrático
             modelo_q <- tryCatch(
@@ -200,21 +205,21 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
             )
             
             if (is.null(modelo_q) || length(coef(modelo_q)) < 3 || is.na(coef(modelo_q)[3])) {
-              text_output <- paste0(text_output, "No se pudo ajustar un modelo cuadrático (datos insuficientes o no lineales).\n")
+              params_df_temp <- add_param_row(params_df_temp, "Nota", "No se pudo ajustar un modelo cuadrático (datos insuficientes o no lineales).", "%s")
             } else {
               coefs <- coef(modelo_q); c0 <- coefs[1]; b <- coefs[2]; a <- coefs[3]
               
               if(abs(a) < 1e-9) { # Si 'a' es casi cero, es lineal
-                text_output <- paste0(text_output, "Los datos no se ajustan a un modelo cuadrático significativo (se asemeja a lineal).\n")
+                params_df_temp <- add_param_row(params_df_temp, "Nota", "Los datos no se ajustan a un modelo cuadrático significativo (se asemeja a lineal).", "%s")
               } else {
                 t_opt <- -b / (2 * a)
                 A_max <- c0 + b * t_opt + a * t_opt^2
                 
-                text_output <- paste0(text_output,
-                                      sprintf("Tiempo óptimo (t_opt)    = %.1f min (%.1f h)\n", t_opt, t_opt / 60),
-                                      sprintf("Actividad máxima (A_max) = %.1f U/L\n", A_max))
+                params_df_temp <- add_param_row(params_df_temp, "Tiempo óptimo (min)", t_opt)
+                params_df_temp <- add_param_row(params_df_temp, "Tiempo óptimo (h)", t_opt / 60)
+                params_df_temp <- add_param_row(params_df_temp, "Actividad máxima (U/L)", A_max)
                 
-                # Cálculo de decaimiento (solo si t_opt es positivo y dentro del rango de datos)
+                # Cálculo de decaimiento (solo if t_opt es positivo y dentro del rango de datos)
                 if (!is.na(t_opt) && t_opt >= min(df_grupo$Tiempo_fermentacion, na.rm = TRUE) && A_max > 0) {
                   decay_data <- subset(df_grupo, Tiempo_fermentacion >= t_opt & Promedio_U_L > 0)
                   if(nrow(decay_data) > 1) {
@@ -226,35 +231,69 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
                     
                     if (!is.null(mod2o) && !is.na(coef(mod2o)[2])) {
                       k <- coef(mod2o)[2]
-                      # t_half solo si k y A_max son positivos
+                      # t_half solo if k y A_max son positivos
                       if (k > 0 && A_max > 0) {
                         t_half <- 1 / (k * A_max)
-                        text_output <- paste0(text_output,
-                                              sprintf("Constante decaimiento 2º orden (k) = %.5f L·U⁻¹·min⁻¹\n", k),
-                                              sprintf("Vida media (t1/2) a A_max        = %.1f min (%.1f h)\n", t_half, t_half / 60))
+                        params_df_temp <- add_param_row(params_df_temp, "Constante decaimiento 2º orden (L·U⁻¹·min⁻¹)", k, "%.5f")
+                        params_df_temp <- add_param_row(params_df_temp, "Vida media (t1/2) a A_max (min)", t_half)
+                        params_df_temp <- add_param_row(params_df_temp, "Vida media (t1/2) a A_max (h)", t_half / 60)
                       } else {
-                        text_output <- paste0(text_output, "No se pudo calcular k y t1/2 (k o A_max no son positivos).\n")
+                        params_df_temp <- add_param_row(params_df_temp, "Nota", "No se pudo calcular k y t1/2 (k o A_max no son positivos).", "%s")
                       }
                     } else {
-                      text_output <- paste0(text_output, "No se pudo ajustar el modelo de decaimiento de 2º orden.\n")
+                      params_df_temp <- add_param_row(params_df_temp, "Nota", "No se pudo ajustar el modelo de decaimiento de 2º orden.", "%s")
                     }
                   } else {
-                    text_output <- paste0(text_output, "No hay suficientes datos en la fase de decaimiento para calcular k y t1/2.\n")
+                    params_df_temp <- add_param_row(params_df_temp, "Nota", "No hay suficientes datos en la fase de decaimiento para calcular k y t1/2.", "%s")
                   }
                 } else {
-                  text_output <- paste0(text_output, "Tiempo óptimo no válido o Actividad Máxima no positiva, no se calcula decaimiento.\n")
+                  params_df_temp <- add_param_row(params_df_temp, "Nota", "Tiempo óptimo no válido o Actividad Máxima no positiva, no se calcula decaimiento.", "%s")
                 }
               }
             }
           }
-          data.frame(text_output = text_output) # Devolver un dataframe con el texto
+          # Retornar el data.frame con los parámetros de este grupo, incluyendo la columna Grupo
+          data.frame(Grupo = grupo_actual, params_df_temp, stringsAsFactors = FALSE)
         }) %>%
-        pull(text_output) %>% # Extraer la columna de texto
-        paste(collapse = "\n") # Unir todos los textos de los grupos
+        ungroup() # Quitar la agrupación para que sea un solo dataframe
+      
+      return(all_params_df)
     })
     
-    output$parametros_cineticos <- renderPrint({ # ID actualizado
-      cat(parametros_cineticos_por_grupo())
+    # --- UI para Parámetros Cinéticos (ahora con tablas) ---
+    output$parametros_cineticos_ui <- renderUI({
+      req(parametros_cineticos_por_grupo())
+      df_params <- parametros_cineticos_por_grupo() # Esto ahora es un solo data.frame combinado
+      
+      if (nrow(df_params) == 0) {
+        return(tags$p("No hay parámetros cinéticos disponibles para mostrar."))
+      }
+      
+      grupos <- unique(df_params$Grupo)
+      lapply(grupos, function(g) {
+        df_grupo_params <- df_params %>% filter(Grupo == g) %>% select(-Grupo)
+        
+        tagList(
+          h5(paste("Parámetros Cinéticos - Grupo", g), style = "font-weight: bold;"),
+          # Usar session$ns para los IDs de las tablas dinámicas
+          tableOutput(session$ns(paste0("tabla_parametros_", g))),
+          hr()
+        )
+      })
+    })
+    
+    # --- Lógica para renderizar cada tabla de parámetros ---
+    observe({
+      req(parametros_cineticos_por_grupo())
+      df_params <- parametros_cineticos_por_grupo()
+      for (g in unique(df_params$Grupo)) {
+        local({
+          grupo_local <- g
+          output[[paste0("tabla_parametros_", grupo_local)]] <- renderTable({
+            df_params %>% filter(Grupo == grupo_local) %>% select(-Grupo)
+          }, striped = TRUE, hover = TRUE, bordered = TRUE, align = 'l')
+        })
+      }
     })
     
     # --- GRÁFICAS ---
@@ -269,7 +308,6 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       }
       
       # Ordenar los datos por Grupo y luego por Absorbancia_Neta para que la línea se dibuje correctamente
-      # Esto es crucial para que la geom_line conecte los puntos en el orden deseado (por Absorbancia)
       df_plot_ordered <- df_plot %>% arrange(Grupo, Absorbancia_Neta)
       
       ggplot(df_plot_ordered, aes(x = Absorbancia_Neta, y = Promedio_U_L, color = Grupo)) +
@@ -390,60 +428,9 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       }
     })
     
-    # --- Descarga de Reporte ---
-    output$download_button_ui <- renderUI({ req(datos_procesados()); downloadButton(session$ns("downloadReport"), "Descargar Reporte Completo (PDF)", class = "btn-success") })
-    
-    output$downloadReport <- downloadHandler(
-      filename = function() { paste0("reporte_actividad_amilasa_", Sys.Date(), ".pdf") },
-      content = function(file) {
-        # Muestra notificación al usuario
-        showNotification("Generando reporte en PDF, por favor espere...", duration = 10, type = "message")
-        
-        # 1. CAPTURAR todos los datos en variables locales INMEDIATAMENTE.
-        # Esto evita problemas de alcance con las funciones reactivas.
-        tabla_data <- datos_procesados()
-        params_texto <- parametros_cineticos_por_grupo()
-        grupos_disponibles_rep <- unique(tabla_data$Grupo)
-        
-        # Obtener valores de Blanco y Estándar para el reporte
-        df_raw_for_report <- read.csv(input$file_datos$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
-        od_blanco_df_report <- df_raw_for_report %>% filter(Tipo == "Blanco") %>% pivot_longer(cols = c(OD1, OD2), names_to = "replica", values_to = "od")
-        od_estandares_df_report <- df_raw_for_report %>% filter(Tipo == "Estandar") %>% pivot_longer(cols = c(OD1, OD2), names_to = "replica", values_to = "od")
-        OD_blanco_promedio_report  <- mean(od_blanco_df_report$od, na.rm = TRUE)
-        OD_estandar_promedio_report <- mean(od_estandares_df_report$od, na.rm = TRUE)
-        
-        # 2. CREAR un directorio temporal para TODOS los archivos (plantilla e imágenes).
-        temp_dir <- tempdir()
-        
-        # 3. COPIAR la plantilla a este directorio temporal.
-        # (Se asume que 'reporte_template_amilasa.Rmd' estará en el mismo directorio que 'app.R')
-        temp_template_path <- file.path(temp_dir, "reporte_template_amilasa.Rmd")
-        # Asegúrate de crear este archivo Rmd si aún no existe.
-        file.copy("reporte_template_amilasa.Rmd", temp_template_path, overwrite = TRUE)
-        
-        # 4. PREPARAR la lista de parámetros para el reporte.
-        params <- list(
-          datos_completos = tabla_data,
-          resultados_cineticos = params_texto,
-          grupos_disponibles_rep = grupos_disponibles_rep,
-          nombre_archivo_original = input$file_datos$name,
-          factor_dilucion = input$DF,
-          tiempo_reaccion = input$T,
-          OD_blanco_promedio = OD_blanco_promedio_report,
-          OD_estandar_promedio = OD_estandar_promedio_report
-        )
-        
-        # 5. RENDERIZAR el reporte, especificando el directorio de trabajo.
-        rmarkdown::render(
-          input = temp_template_path,
-          output_file = file,
-          params = params,
-          envir = new.env(parent = globalenv())
-        )
-        
-        showNotification("Reporte PDF generado exitosamente!", duration = 5, type = "success")
-      }
-    )
+    # --- La sección de Descarga de Reporte ha sido eliminada por completo ---
+    # output$download_button_ui <- renderUI({ ... })
+    # output$downloadReport <- downloadHandler({ ... })
     
     # Devolver los datos procesados para el módulo integrado
     return(reactive({
