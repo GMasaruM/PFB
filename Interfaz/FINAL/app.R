@@ -1,40 +1,49 @@
 # app.R
+
+# --- Cargar librerías principales ---
 library(shiny)
-library(ggplot2)
 library(dplyr)
 library(tidyr)
-# Para la curva de calibración interactiva
-library(plotly) # Necesario para los gráficos de los módulos
-library(stringr) # Necesario para str_extract
-library(patchwork) # Para combinar gráficos de consumo si hay múltiples grupos
+library(ggplot2)
+library(plotly)
+library(patchwork)
+library(stringr)
+library(bslib)
 
-
-
-# 1. Cargar todos los módulos
-source("modulo_etanol.R")
+# --- Cargar los archivos de los módulos ---
 source("modulo_glucosa.R")
+source("modulo_etanol.R")
 source("modulo_amilasa.R")
 source("modulo_integrado.R")
 
-# 2. UI principal con navbarPage
+# --- Interfaz de Usuario (UI) ---
 ui <- navbarPage(
-  title = "Panel de Análisis Bioquímico",
-  tabPanel("Glucosa", glucosaUI("glucosa_app")),
-  tabPanel("Amilasa", amilasaUI("amilasa_app")),
-  tabPanel("Etanol", etanolUI("etanol_app")),
-  tabPanel("Análisis Integrado", integradoUI("integrado_app"))
+  "App de Análisis de Fermentación",
+  id = "main_nav",
+  theme = bs_theme(version = 5, bootswatch = "litera"),
+  
+  tabPanel("Glucosa", glucosaUI("glucosa_mod")),
+  tabPanel("Etanol", etanolUI("etanol_mod")),
+  tabPanel("Amilasa", amilasaUI("amilasa_mod")),
+  tabPanel("Análisis Integrado", integradoUI("integrado_mod"))
 )
 
-# 3. Server principal que conecta los módulos
+# --- Servidor (Server) ---
 server <- function(input, output, session) {
-  datos_glucosa_reactivos <- glucosaServer("glucosa_app")
-  datos_amilasa_reactivos <- amilasaServer("amilasa_app")
-  datos_etanol_reactivos <- etanolServer("etanol_app")
   
-  integradoServer("integrado_app", 
-                  datos_etanol_r = datos_etanol_reactivos,
-                  datos_glucosa_r = datos_glucosa_reactivos,
-                  datos_amilasa_r = datos_amilasa_reactivos)
+  # Llamar a los servidores de cada módulo y capturar los datos que devuelven
+  glucosa_data_r <- glucosaServer("glucosa_mod")
+  etanol_data_r  <- etanolServer("etanol_mod")
+  amilasa_data_r <- amilasaServer("amilasa_mod")
+  
+  # Pasar esos datos reactivos al servidor del módulo integrado
+  integradoServer(
+    "integrado_mod",
+    datos_glucosa_r = glucosa_data_r,
+    datos_etanol_r  = etanol_data_r,
+    datos_amilasa_r = amilasa_data_r
+  )
 }
 
+# --- Ejecutar la aplicación ---
 shinyApp(ui, server)
