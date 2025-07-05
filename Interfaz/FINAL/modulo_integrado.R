@@ -1,10 +1,4 @@
-# modulo_integrado.R
-library(shiny)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(plotly)
-library(scales) # Para labeller con scales
+
 
 integradoUI <- function(id) {
   ns <- NS(id) # Namespace para IDs

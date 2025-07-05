@@ -1,11 +1,4 @@
 
-# modulo_glucosa.R
-library(shiny)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(ggpmisc) # Útil para añadir fórmulas y R2 directamente a los gráficos ggplot
-library(plotly) # Para gráficos interactivos
 
 glucosaUI <- function(id) {
   ns <- NS(id) # Crear el namespace para los IDs
