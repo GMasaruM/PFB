@@ -1,0 +1,13 @@
+Tipo,Muestra_ID,Tiempo_fermentacion,concentracion_etanol,OD1,OD2
+Blanco,STD1,,0,0.395,0.327
+Estandar,STD2,,0.1,3.476,3.425
+Estandar,STD3,,0.06,2.359,2.291
+Estandar,STD4,,0.03,1.421,1.273
+Muestra,A1,0,,0.747,0.597
+Muestra,A2,1440,,0.742,0.666
+Muestra,A3,2880,,0.711,0.714
+Muestra,A4,4320,,0.659,0.687
+Muestra,B1,0,,0.808,0.771
+Muestra,B2,1440,,0.681,0.623
+Muestra,B3,2880,,0.749,0.84
+Muestra,B4,4320,,0.587,0.57
