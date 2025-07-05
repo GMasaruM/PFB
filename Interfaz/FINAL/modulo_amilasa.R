@@ -127,7 +127,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
         ) %>%
         ungroup() %>% # Quitar la agrupación por fila
         
-        # Convertir tiempo de minutos a horas para la tabla y gráficas
+        # Convertir tiempo de minutos a horas para la tabla y algunas gráficas
         mutate(Tiempo_fermentacion_h = Tiempo_fermentacion / 60) %>%
         
         # Organizar por grupo y luego por tiempo
@@ -329,18 +329,18 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
         return(ggplot() + annotate("text", x=0.5, y=0.5, label="Selecciona grupo(s) para visualizar.", size=6, color="gray") + theme_void())
       }
       
-      p <- ggplot(df_plot, aes(x = Tiempo_fermentacion_h, y = Promedio_U_L, color = Grupo, group = Grupo)) + # Tiempo en horas
+      # MODIFICACIÓN AQUÍ: Usar Tiempo_fermentacion (en minutos)
+      p <- ggplot(df_plot, aes(x = Tiempo_fermentacion, y = Promedio_U_L, color = Grupo, group = Grupo)) +
         geom_line(size = 1) +
         geom_point(size = 4, alpha = 0.8) +
         labs(title = "Gráfica de Actividad vs. Tiempo",
-             x = "Tiempo (horas)", # Cambiado a horas
+             x = "Tiempo (min)", # ETIQUETA CAMBIADA A MINUTOS
              y = "Actividad Promedio (U/L)") +
         theme_minimal(base_size = 14) +
         theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom")
       
       # Mostrar desviación estándar si el usuario lo desea y si hay datos válidos para SD
       if (input$plotAct_show_sd) {
-        # Filtra NAs para SD, ya que ggplot lanzaría warnings si hay NA en SD_U_L
         p <- p + geom_errorbar(data = df_plot %>% filter(!is.na(SD_U_L) & SD_U_L >= 0),
                                aes(ymin = Promedio_U_L - SD_U_L, ymax = Promedio_U_L + SD_U_L), width = 0.2, alpha = 0.5)
       }

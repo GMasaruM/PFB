@@ -9,7 +9,7 @@ library(plotly) # Para gráficos interactivos
 
 glucosaUI <- function(id) {
   ns <- NS(id) # Crear el namespace para los IDs
-  
+
   sidebarLayout(
     sidebarPanel(
       h4("1. Carga de Datos"),
@@ -52,44 +52,44 @@ glucosaUI <- function(id) {
 
 glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_r se mantiene para compatibilidad, pero no se usa con fileInput directo.
   moduleServer(id, function(input, output, session) {
-    
+
     datos_analizados <- eventReactive(input$calcular, {
       req(input$file_datos);
       validate(need(tools::file_ext(input$file_datos$name) == "csv", "Por favor, carga un archivo .csv"))
-      
+
       df_raw <- tryCatch(
         read.csv(input$file_datos$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE),
         error = function(e) {
           shiny::validate("No se pudo leer el archivo CSV. Asegúrate de que el formato es correcto.")
         }
       )
-      
+
       cols_requeridas <- c("Tipo", "Muestra_ID", "Tiempo_fermentacion", "Concentracion", "OD1", "OD2")
       validate(
         need(all(cols_requeridas %in% names(df_raw)),
              paste("Faltan una o más columnas requeridas:", paste(cols_requeridas, collapse = ", ")))
       )
-      
+
       # 1. Calcular OD del blanco
       od_blanco_df <- df_raw %>%
         filter(Tipo == "Blanco") %>%
         pivot_longer(cols = c(OD1, OD2), names_to = "replica", values_to = "OD")
-      
+
       validate(need(nrow(od_blanco_df) > 0, "No se encontraron datos de 'Blanco' en la columna 'Tipo'."))
-      
+
       od_blanco <- mean(od_blanco_df$OD, na.rm = TRUE)
       validate(need(!is.na(od_blanco) && is.finite(od_blanco), "El OD del blanco no pudo ser calculado. Asegúrate que los valores de OD1/OD2 del blanco no son NA/Inf."))
-      
+
       # 2. Curva de Calibración con Estándares
       df_estandares <- df_raw %>%
         filter(Tipo == "Estandar") %>%
         mutate(OD_prom = rowMeans(select(., OD1, OD2), na.rm = TRUE),
                OD_corregido = OD_prom - od_blanco)
-      
+
       validate(
         need(nrow(df_estandares) >= 2, "Se necesitan al menos 2 estándares para construir la curva de calibración.")
       )
-      
+
       # Modelo lineal: Concentracion = slope * OD_corregido (forzando intercepto a 0)
       # 'slope' ahora tendrá unidades de µM/OD
       modelo_lm <- tryCatch(
@@ -98,20 +98,20 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
           shiny::validate(paste("Error al crear el modelo de calibración:", e$message))
         }
       )
-      
+
       validate(need(!is.null(modelo_lm), "No se pudo crear el modelo de calibración."))
-      
+
       slope <- tryCatch(
         coef(modelo_lm)[["OD_corregido"]],
         error = function(e) NA_real_
       )
-      
+
       validate(
         need(!is.na(slope) && is.finite(slope) && slope != 0, "El slope de la curva de calibración es inválido (podría ser 0, NA o Inf)."),
         # Para que la glucosa aumente con la absorbancia, el slope debe ser positivo.
         need(slope > 0, "El slope de la curva de calibración es negativo. Esto es inusual para un ensayo de glucosa donde concentración aumenta con OD.")
       )
-      
+
       # 3. Procesar Muestras
       df_muestras_long <- df_raw %>%
         filter(Tipo == "Muestra") %>%
@@ -125,11 +125,11 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
           OD_corregida = OD_raw - od_blanco,
           Glucosa_uM = pmax(0, (OD_corregida / slope) * input$DF)
         )
-      
+
       validate(
         need(nrow(df_muestras_long) > 0, "No se encontraron datos de tipo 'Muestra' en el archivo.")
       )
-      
+
       # Sumarizar datos de muestras por grupo y tiempo (media y desviación estándar)
       df_muestras_sumarizado <- df_muestras_long %>%
         group_by(Grupo, Tiempo_fermentacion) %>%
@@ -139,11 +139,11 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
           .groups = 'drop'
         ) %>%
         arrange(Grupo, Tiempo_fermentacion)
-      
+
       list(estandares = df_estandares, modelo_calibracion = modelo_lm,
            muestras_long = df_muestras_long, muestras_sumarizado = df_muestras_sumarizado)
     })
-    
+
     # --- Pestaña: Resultados Tabulados ---
     output$tablas_resultados <- renderUI({
       req(datos_analizados())
@@ -152,7 +152,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
         tagList(h5(paste("Concentración de Glucosa - Grupo", g)), tableOutput(session$ns(paste0("tabla_res_", g))), hr())
       })
     })
-    
+
     observe({
       req(datos_analizados())
       df_sumarizado <- datos_analizados()$muestras_sumarizado
@@ -177,11 +177,11 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
         })
       }
     })
-    
+
     # --- Pestaña: Análisis de Consumo ---
     output$analisis_por_grupo <- renderUI({
       req(datos_analizados());
-      
+
       tagList(
         lapply(unique(datos_analizados()$muestras_sumarizado$Grupo), function(g) {
           # Usar session$ns para los IDs de las tablas dinámicas
@@ -189,34 +189,34 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
         })
       )
     })
-    
+
     observe({
       req(datos_analizados());
       df_sumarizado <- datos_analizados()$muestras_sumarizado;
-      
+
       for (g in unique(df_sumarizado$Grupo)) {
         local({
           grupo_local <- g;
           datos_grupo <- df_sumarizado %>% filter(Grupo == grupo_local) %>% arrange(Tiempo_fermentacion);
-          
+
           # Usar session$ns para asignar el output a la tabla dinámica
           output[[paste0("tabla_analisis_", grupo_local)]] <- renderTable({
             if (nrow(datos_grupo) < 2) {
               return(data.frame(Parámetro = "Error", Valor = "Se necesitan al menos 2 puntos de tiempo para el cálculo de los parámetros."))
             };
-            
+
             glucosa_inicial_medida <- datos_grupo$Glucosa_uM_mean[1]
             glucosa_final_medida <- tail(datos_grupo$Glucosa_uM_mean, 1)
             cambio_neto_total_glucosa <- glucosa_final_medida - glucosa_inicial_medida
             duracion_total <- tail(datos_grupo$Tiempo_fermentacion, 1) - datos_grupo$Tiempo_fermentacion[1]
-            
+
             min_glucosa_val <- min(datos_grupo$Glucosa_uM_mean, na.rm = TRUE)
             max_glucosa_val <- max(datos_grupo$Glucosa_uM_mean, na.rm = TRUE)
             time_at_max_glucosa <- datos_grupo$Tiempo_fermentacion[which.max(datos_grupo$Glucosa_uM_mean)]
-            
+
             glucosa_producida_inicial_a_max <- max_glucosa_val - glucosa_inicial_medida
             glucosa_consumida_max_a_final <- max_glucosa_val - glucosa_final_medida
-            
+
             data.frame(
               Parámetro = c(
                 "Glucosa Inicial Media (µM)",
@@ -245,16 +245,16 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
         })
       }
     })
-    
+
     # --- Pestaña: Gráficos de Análisis ---
     grupos_disponibles_reactivos <- reactive({ req(datos_analizados()); unique(datos_analizados()$muestras_sumarizado$Grupo) })
-    
+
     output$diagnostic_controls_ui <- renderUI({
       grupos <- grupos_disponibles_reactivos();
       # Usar session$ns para los IDs de los inputs
       checkboxGroupInput(session$ns("selected_groups_diagnostic"), "Seleccionar Grupos:", choices = grupos, selected = grupos, inline = TRUE)
     })
-    
+
     output$consumption_controls_ui <- renderUI({
       grupos <- grupos_disponibles_reactivos();
       fluidRow(
@@ -263,16 +263,16 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
         column(4, checkboxInput(session$ns("show_sd"), "Desv. Estándar", value = TRUE))
       )
     })
-    
+
     output$plot_calibracion <- renderPlotly({
       req(datos_analizados());
       datos <- datos_analizados();
       df_estandares <- datos$estandares;
       modelo <- datos$modelo_calibracion;
-      
+
       # Obtener el R^2 del modelo
       r2_valor <- summary(modelo)$r.squared
-      
+
       p <- ggplot(df_estandares, aes(x = OD_corregido, y = Concentracion,
                                      text = paste("Abs Corregida:", round(OD_corregido, 3),
                                                   "<br>Concentración:", round(Concentracion, 2), "µM"))) +
@@ -282,18 +282,18 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
              y = "Concentración de Glucosa (µM)") +
         theme_minimal(base_size = 10) +
         theme(plot.title = element_text(size = 12, hjust = 0.5));
-      
+
       fig <- ggplotly(p, tooltip = "text");
-      
+
       # Añadir la línea de regresión usando el modelo ajustado
       fig <- fig %>%
         add_lines(x = ~OD_corregido, y = ~predict(modelo), data = df_estandares,
                   name = 'Regresión', line = list(color = 'red', width = 2), inherit = FALSE);
-      
+
       # Actualizar la fórmula mostrada en el gráfico
       formula_texto <- sprintf("[Glucosa] = %.3f * OD", coef(modelo)[["OD_corregido"]]);
       r2_texto <- sprintf("R<sup>2</sup> = %.4f", r2_valor);
-      
+
       fig <- fig %>%
         layout(annotations = list(x = 0.95, y = 0.05, xref = "paper", yref = "paper",
                                   text = paste(formula_texto, r2_texto, sep = "<br>"),
@@ -302,7 +302,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
         config(displaylogo = FALSE)
       fig
     })
-    
+
     output$plot_diagnostico_muestras <- renderPlotly({
       req(datos_analizados(), input$selected_groups_diagnostic) # input está en el namespace del módulo
       df_muestras_filtrado <- datos_analizados()$muestras_long %>%
@@ -314,23 +314,23 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
           .groups = "drop"
         ) %>%
         arrange(Muestra_ID, Tiempo_fermentacion)
-      
+
       # Calcular rangos dinámicos para los ejes X y Y
       x_min_data <- min(df_muestras_filtrado$OD_prom_corregida, na.rm = TRUE)
       x_max_data <- max(df_muestras_filtrado$OD_prom_corregida, na.rm = TRUE)
       y_min_data <- min(df_muestras_filtrado$Glucosa_uM_mean, na.rm = TRUE)
       y_max_data <- max(df_muestras_filtrado$Glucosa_uM_mean, na.rm = TRUE)
-      
+
       # Añadir un pequeño margen para que los puntos no toquen los bordes
       x_lower_bound <- max(0, x_min_data - (x_max_data - x_min_data) * 0.1)
       x_upper_bound <- x_max_data + (x_max_data - x_min_data) * 0.1
       y_lower_bound <- max(0, y_min_data - (y_max_data - y_min_data) * 0.1)
       y_upper_bound <- y_max_data + (y_max_data - y_min_data) * 0.1
-      
+
       # Manejar el caso donde el rango de datos es casi cero
       if ((x_upper_bound - x_lower_bound) < 1e-6) { x_upper_bound <- x_lower_bound + 0.1 }
       if ((y_upper_bound - y_lower_bound) < 1e-6) { y_upper_bound <- y_lower_bound + 0.1 }
-      
+
       plot_ly(data = df_muestras_filtrado, x = ~OD_prom_corregida, y = ~Glucosa_uM_mean,
               type = 'scatter',
               mode = 'lines+markers',
@@ -349,12 +349,12 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
                legend = list(title = list(text = 'Grupo'))) %>%
         config(displaylogo = FALSE)
     })
-    
-    
+
+
     output$plot_consumo_con_sd <- renderPlotly({
       req(datos_analizados(), input$selected_groups_consumption); # input está en el namespace del módulo
       df_filtrado <- datos_analizados()$muestras_sumarizado %>% filter(Grupo %in% input$selected_groups_consumption);
-      
+
       fig <- plot_ly();
       for(g in unique(df_filtrado$Grupo)) {
         df_grupo <- filter(df_filtrado, Grupo == g);
@@ -372,14 +372,14 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) { # datos_crudos_
                      legend = list(title=list(text='Grupo'))) %>%
         config(displaylogo = FALSE)
     })
-    
+
     # --- Dado que no se solicitó la funcionalidad de descarga de reporte PDF en este código ---
     # La parte de UI para el botón de descarga no se renderiza.
     output$download_button_ui <- renderUI({
       NULL # No hay botón de descarga en este código fuente
     })
     # La lógica para downloadHandler no está presente en el código fuente proporcionado.
-    
+
     # Devolver los datos procesados para el módulo integrado
     return(reactive({
       req(datos_analizados())
