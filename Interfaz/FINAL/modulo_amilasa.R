@@ -1,10 +1,5 @@
-# modulo_amilasa.R
-library(shiny)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(stringr) # Necesario para str_extract
-library(patchwork) # Para combinar gráficos de decaimiento si hay múltiples grupos
+
+
 
 amilasaUI <- function(id) {
   ns <- NS(id) # Crear el namespace para los IDs

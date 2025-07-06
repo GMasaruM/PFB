@@ -1,13 +1,4 @@
 
-# modulo_etanol.R
-library(shiny)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-# rmarkdown y knitr no son necesarios porque se eliminó el downloadHandler en los módulos anteriores.
-# library(rmarkdown)
-# library(knitr)
-library(stringr) # Necesario para str_extract
 
 etanolUI <- function(id) {
   # <<< 1. Se crea el namespace para los IDs >>>
