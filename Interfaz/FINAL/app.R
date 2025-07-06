@@ -27,7 +27,7 @@ ui <- navbarPage(
   
   tabPanel("Glucosa", glucosaUI("glucosa_mod")),
   tabPanel("Amilasa", amilasaUI("amilasa_mod")),
-  tabPanel("Etanol", amilasaUI("etanol_mod")),
+  tabPanel("Etanol", etanolUI("etanol_mod")),
   tabPanel("Análisis Integrado", integradoUI("integrado_mod"))
 )
 
