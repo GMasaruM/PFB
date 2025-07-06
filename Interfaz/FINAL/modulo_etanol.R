@@ -21,7 +21,7 @@ etanolUI <- function(id) {
       hr(),
       h4("2. Parámetros de Cálculo"),
       numericInput(ns("DF"), "Factor de dilución (DF):", value = 50, min = 1, step = 1),
-      numericInput(ns("cantidad_sustrato"), "Cantidad de Sustrato Utilizado (g):", value = 100, min = 1, step = 1),
+      numericInput(ns("cantidad_sustrato"), "Cantidad de Sustrato Utilizado (g):", value = 1000, min = 1, step = 1),
       hr(),
       actionButton(ns("calcular"), "Calcular y Graficar", class = "btn-primary", icon = icon("cogs"))
     ),

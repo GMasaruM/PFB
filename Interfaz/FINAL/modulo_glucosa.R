@@ -24,11 +24,11 @@ glucosaUI <- function(id) {
                  plotlyOutput(ns("plot_calibracion")),
                  hr(),
                  h4("Absorbancia vs. Concentración de Glucosa"),
-                 uiOutput(ns("diagnostic_controls_ui")), # <<-- UI COMPLETAMENTE RESTAURADA
+                 uiOutput(ns("diagnostic_controls_ui")), 
                  plotlyOutput(ns("plot_diagnostico_muestras")),
                  hr(),
                  h4("Concentración de Glucosa vs. Tiempo"),
-                 uiOutput(ns("consumption_controls_ui")), # <<-- UI COMPLETAMENTE RESTAURADA
+                 uiOutput(ns("consumption_controls_ui")), 
                  plotlyOutput(ns("plot_consumo_con_sd"))
         )
       )
@@ -45,13 +45,13 @@ glucosaUI <- function(id) {
 glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
   moduleServer(id, function(input, output, session) {
     
-    # --- 1. CÁLCULO CENTRALIZADO (Esta parte es correcta y no se modifica) ---
+    # --- 1. CÁLCULO CENTRALIZADO  ---
     datos_analizados <- eventReactive(input$calcular, {
       req(input$file_datos); df_raw <- tryCatch(read.csv(input$file_datos$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE), error = function(e) shiny::validate("No se pudo leer el archivo CSV.")); cols_requeridas <- c("Tipo", "Muestra_ID", "Tiempo_fermentacion", "Concentracion", "OD1", "OD2"); validate(need(all(cols_requeridas %in% names(df_raw)), "Faltan columnas requeridas.")); od_blanco_df <- df_raw %>% filter(Tipo == "Blanco") %>% pivot_longer(c(OD1, OD2), values_to = "OD"); validate(need(nrow(od_blanco_df) > 0, "No hay datos de 'Blanco'.")); od_blanco <- mean(od_blanco_df$OD, na.rm = TRUE); validate(need(!is.na(od_blanco), "OD del blanco no es válido.")); df_estandares <- df_raw %>% filter(Tipo == "Estandar") %>% mutate(OD_prom = rowMeans(select(., OD1, OD2), na.rm = TRUE), OD_corregido = OD_prom - od_blanco); validate(need(nrow(df_estandares) >= 2, "Se necesitan al menos 2 estándares.")); modelo_lm <- lm(Concentracion ~ OD_corregido - 1, data = df_estandares); slope <- coef(modelo_lm)[["OD_corregido"]]; validate(need(slope > 0, "El slope de la curva de calibración debe ser positivo."))
       df_muestras_long <- df_raw %>% filter(Tipo == "Muestra") %>% pivot_longer(cols = c(OD1, OD2), names_to = "replica", values_to = "OD_raw") %>% mutate(Grupo = substr(Muestra_ID, 1, 1), OD_corregida = OD_raw - od_blanco, Glucosa_uM = pmax(0, (OD_corregida / slope) * input$DF)); validate(need(nrow(df_muestras_long) > 0, "No se encontraron datos de 'Muestra'."))
       df_muestras_sumarizado <- df_muestras_long %>% group_by(Grupo, Tiempo_fermentacion) %>% summarise(Glucosa_uM_mean = mean(Glucosa_uM, na.rm = TRUE), Glucosa_uM_sd = sd(Glucosa_uM, na.rm = TRUE), OD_corregida_mean = mean(OD_corregida, na.rm = TRUE), OD_corregida_sd = sd(OD_corregida, na.rm = TRUE), .groups = 'drop') %>% arrange(Grupo, Tiempo_fermentacion)
       
-      # Este es el dataframe para la tabla de resultados. Nota los nombres de las columnas.
+      # Este es el dataframe para la tabla de resultados.
       df_tabla_resultados <- df_raw %>%
         filter(Tipo == "Muestra") %>%
         mutate(
@@ -69,7 +69,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       list(estandares = df_estandares, modelo_calibracion = modelo_lm, muestras_long = df_muestras_long, muestras_sumarizado = df_muestras_sumarizado, tabla_resultados = df_tabla_resultados)
     })
     
-    # --- 2. Pestañas de Tablas y Análisis (Bloque con la corrección) ---
+    # --- 2. Pestañas de Tablas y Análisis ---
     output$tablas_resultados <- renderUI({ req(datos_analizados()); lapply(unique(datos_analizados()$tabla_resultados$Grupo), function(g) { tagList(h5(paste("Resultados para el Grupo", g)), tableOutput(session$ns(paste0("tabla_res_", g))), hr()) }) })
     
     observe({ 
@@ -82,7 +82,6 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
             df_tabla %>%
               filter(Grupo == grupo_local) %>%
               mutate(Tiempo = Tiempo_fermentacion) %>%
-              # <<-- CORRECCIÓN AQUÍ: Se usan los nombres correctos de las columnas del dataframe 'df_tabla_resultados' -->>
               select(
                 `Muestra ID` = ID,
                 `Tiempo (min)` = Tiempo,
@@ -102,7 +101,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
     output$analisis_por_grupo <- renderUI({ req(datos_analizados()); tagList(lapply(unique(datos_analizados()$muestras_sumarizado$Grupo), function(g) { tagList(h5(paste("Parámetros para el Grupo", g)), tableOutput(session$ns(paste0("tabla_analisis_", g))), hr()) })) })
     observe({ req(datos_analizados()); df_sumarizado <- datos_analizados()$muestras_sumarizado; for (g in unique(df_sumarizado$Grupo)) { local({ grupo_local <- g; datos_grupo <- df_sumarizado %>% filter(Grupo == grupo_local) %>% arrange(Tiempo_fermentacion); output[[paste0("tabla_analisis_", grupo_local)]] <- renderTable({ if (nrow(datos_grupo) < 2) { return(data.frame(Parámetro = "Error", Valor = "Se necesitan al menos 2 puntos de tiempo.")) }; glucosa_inicial_medida <- datos_grupo$Glucosa_uM_mean[1]; glucosa_final_medida <- tail(datos_grupo$Glucosa_uM_mean, 1); cambio_neto_total_glucosa <- glucosa_final_medida - glucosa_inicial_medida; duracion_total <- tail(datos_grupo$Tiempo_fermentacion, 1) - datos_grupo$Tiempo_fermentacion[1]; min_glucosa_val <- min(datos_grupo$Glucosa_uM_mean, na.rm = TRUE); max_glucosa_val <- max(datos_grupo$Glucosa_uM_mean, na.rm = TRUE); time_at_max_glucosa <- datos_grupo$Tiempo_fermentacion[which.max(datos_grupo$Glucosa_uM_mean)]; glucosa_producida_inicial_a_max <- max_glucosa_val - glucosa_inicial_medida; glucosa_consumida_max_a_final <- max_glucosa_val - glucosa_final_medida; data.frame( Parámetro = c("Glucosa Inicial Media (µM)", "Glucosa Final Media (µM)", "Glucosa Mínima Observada (µM)", "Glucosa Máxima Observada (µM)", "Tiempo a la Glucosa Máxima (min)", "Glucosa Producida (Inicial a Máx) (µM)", "Glucosa Consumida (Máx a Final) (µM)", "Cambio Neto Total Glucosa (µM)", "Duración del Experimento (min)"), Valor = sprintf("%.3f", c(glucosa_inicial_medida, glucosa_final_medida, min_glucosa_val, max_glucosa_val, time_at_max_glucosa, glucosa_producida_inicial_a_max, glucosa_consumida_max_a_final, cambio_neto_total_glucosa, duracion_total)) ) }, striped = TRUE, hover = TRUE, bordered = TRUE, align = 'l') }) } })
     
-    # --- 3. PESTAÑA GRÁFICOS (con controles y lógica completa, sin cambios) ---
+    # --- 3. PESTAÑA GRÁFICOS  ---
     grupos_disponibles_reactivos <- reactive({ req(datos_analizados()); unique(datos_analizados()$muestras_sumarizado$Grupo) })
     
     output$diagnostic_controls_ui <- renderUI({
