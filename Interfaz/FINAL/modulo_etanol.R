@@ -14,7 +14,10 @@ etanolUI <- function(id) {
     sidebarPanel(
       h4("1. Carga de Datos de Etanol"),
       fileInput(ns("file_datos"), "Selecciona archivo CSV único:", accept = c(".csv")),
-      helpText(HTML("El CSV debe contener: <b>Tipo, Muestra_ID, Tiempo_fermentacion, concentracion_etanol, OD1, OD2</b>.")),
+      helpText(HTML("El CSV debe contener: <b>Tipo, Muestra_ID, Tiempo_fermentacion, concentracion_etanol, OD1, OD2</b>.<br>
+                     - <b>Tipo</b>: 'Muestra', 'Blanco', o 'Estandar'.<br>
+                     - <b>Muestra_ID</b> debe identificar los grupos con una letra inicial (ej: A1, B2).<br>
+                     - <b>OD1 y OD2</b> son los duplicados de la absorbancia.")),
       hr(),
       h4("2. Parámetros de Cálculo"),
       numericInput(ns("DF"), "Factor de dilución (DF):", value = 50, min = 1, step = 1),
