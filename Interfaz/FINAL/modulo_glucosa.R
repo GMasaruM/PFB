@@ -108,7 +108,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
     output$diagnostic_controls_ui <- renderUI({
       grupos <- grupos_disponibles_reactivos()
       tagList(
-        checkboxGroupInput(session$ns("selected_groups_diagnostic"), "Seleccionar Grupos:", choices = grupos, selected = grupos, inline = TRUE),
+        checkboxGroupInput(session$ns("selected_groups_diagnostic"), label=NULL, choices = grupos, selected = grupos, inline = TRUE),
         fluidRow(
           column(3, checkboxInput(session$ns("show_mean_diag"), "Promedio", value = TRUE)),
           column(3, checkboxInput(session$ns("show_sd_diag"), "Desv. Est.", value = TRUE)),
@@ -121,7 +121,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
     output$consumption_controls_ui <- renderUI({
       grupos <- grupos_disponibles_reactivos()
       tagList(
-        checkboxGroupInput(session$ns("selected_groups_consumption"), "Seleccionar Grupos:", choices = grupos, selected = grupos, inline = TRUE),
+        checkboxGroupInput(session$ns("selected_groups_consumption"), label=NULL, choices = grupos, selected = grupos, inline = TRUE),
         fluidRow(
           column(3, checkboxInput(session$ns("show_mean_cons"), "Promedio", value = TRUE)),
           column(3, checkboxInput(session$ns("show_sd_cons"), "Desv. Est.", value = TRUE)),
