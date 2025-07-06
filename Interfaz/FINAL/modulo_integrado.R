@@ -1,4 +1,4 @@
-# Cargar librerías necesarias
+# Cargar librerías
 library(shiny)
 library(dplyr)
 library(ggplot2)
@@ -20,12 +20,12 @@ integradoUI <- function(id) {
              
              wellPanel(
                fluidRow(
-                 # --- AÑADIDA LA OPCIÓN "TODOS" ---
+                 
                  column(6,
                         selectInput(ns("parametro_filtro"),
                                     h5(strong("Mostrar Parámetro:")),
-                                    choices = c("Todos", "Glucosa", "Amilasa", "Etanol"), # Opción "Todos" añadida
-                                    selected = "Todos") # "Todos" por defecto
+                                    choices = c("Todos", "Glucosa", "Amilasa", "Etanol"), 
+                                    selected = "Todos") 
                  ),
                  column(6,
                         checkboxGroupInput(ns("grupo_filtro"),
@@ -37,7 +37,7 @@ integradoUI <- function(id) {
                )
              ),
              
-             plotlyOutput(ns("grafico_combinado"), height = "700px"), # Altura aumentada para facetas
+             plotlyOutput(ns("grafico_combinado"), height = "700px"), 
              hr(),
              h4("Modelo Gráfico de Estados de Fermentación"),
              p(strong("Pasa el ratón sobre un punto para ver un resumen. ¡Haz clic para más detalles!")),
@@ -72,7 +72,7 @@ integradoServer <- function(id, datos_etanol_r, datos_glucosa_r, datos_amilasa_r
       bind_rows(standardize_df(datos_etanol_r(), "Etanol"), standardize_df(datos_glucosa_r(), "Glucosa"), standardize_df(datos_amilasa_r(), "Amilasa")) %>% filter(!is.na(Valor))
     })
     
-    # 2. Filtrar datos (Lógica actualizada)
+    # 2. Filtrar datos
     datos_filtrados <- reactive({
       req(input$parametro_filtro, input$grupo_filtro)
       df <- datos_combinados_crudos()
@@ -84,14 +84,13 @@ integradoServer <- function(id, datos_etanol_r, datos_glucosa_r, datos_amilasa_r
       }
       
       if (nrow(df) > 0) {
-        # Asegurar el orden correcto de los factores para las facetas y colores
         df$TipoMedicion <- factor(df$TipoMedicion, levels = c("Glucosa", "Amilasa", "Etanol"))
         df$Grupo <- factor(df$Grupo, levels = c("A", "B"))
       }
       return(df)
     })
     
-    # 3. Gráfico Combinado (Lógica actualizada)
+    # 3. Gráfico Combinado 
     y_axis_labels <- c("Glucosa"="Concentración de Glucosa (µM)", "Amilasa"="Actividad de la Amilasa (U/L)", "Etanol"="Concentración de Etanol (%)")
     
     output$grafico_combinado <- renderPlotly({
@@ -111,28 +110,28 @@ integradoServer <- function(id, datos_etanol_r, datos_glucosa_r, datos_amilasa_r
           strip.text = element_text(face="bold")
         )
       
-      # Añadir facetas y etiquetas condicionalmente
+      # Etiquetas condicionales
       if (input$parametro_filtro == "Todos") {
         p <- p + 
           facet_wrap(~ TipoMedicion, scales = "free_y", ncol = 1, labeller = as_labeller(y_axis_labels)) +
           labs(
             title = "Evolución de Parámetros Clave",
             x = "Tiempo (min)",
-            y = "Valor" # Etiqueta genérica
+            y = "Valor" 
           )
       } else {
         p <- p + 
           labs(
             title = paste("Evolución de", input$parametro_filtro),
             x = "Tiempo (min)",
-            y = y_axis_labels[input$parametro_filtro] # Etiqueta específica
+            y = y_axis_labels[input$parametro_filtro] 
           )
       }
       
       ggplotly(p) %>% config(displaylogo = FALSE)
     })
     
-    # --- [SECCIONES 4, 5 y 6: SIN CAMBIOS] ---
+    # --- MODELO DE ESTADOS ---
     puntos_data_interactive <- reactive({
       tiempos <- c(0, 1440, 2880, 4320); data.frame(label=c("A1","A2","A3","A4","B1","B2","B3","B4"), x=rep(tiempos, 2), y=c(rep(2,4), rep(1,4)), tooltip_text=c("A1: La maquinaria enzimática se pone en marcha.","A2: Máxima producción de azúcar; inicio fermentación.","A3: Pleno apogeo fermentativo; consumo máximo.","A4: Agotamiento de sustrato; cese de actividad.","B1: Adición de azúcar; amilasa inactiva.","B2: Fermentación rápida basada en azúcar añadido.","B3: Pico de etanol; agotamiento de azúcar.","B4: Colapso de la fermentación; posible avinagramiento."), data_id=c("A1","A2","A3","A4","B1","B2","B3","B4"))
     })

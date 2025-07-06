@@ -3,7 +3,7 @@ amilasaUI <- function(id) {
   
   sidebarLayout(
     sidebarPanel(
-      # ... (sin cambios aquí) ...
+     
       h4("1. Carga de Datos"),
       fileInput(ns("file_datos"), "Selecciona archivo CSV único:", accept = c(".csv")),
       helpText(HTML("El CSV debe contener: <b>Tipo, Muestra_ID, Tiempo_fermentacion, OD1, OD2</b>.<br>
@@ -19,11 +19,11 @@ amilasaUI <- function(id) {
     mainPanel(
       tabsetPanel(
         id = ns("tabs"),
-        # ... (pestañas de tablas y parámetros sin cambios) ...
+        
         tabPanel("Resultados Tabulados", uiOutput(ns("resultados_tabulados_ui"))),
         tabPanel("Parámetros Cinéticos", h4("Parámetros Cinéticos Estimados por Grupo"), uiOutput(ns("parametros_cineticos_ui"))),
         tabPanel("Gráficas",
-                 # <<--- INICIO DE LA MODIFICACIÓN --->>
+                 # <<--- GRAFICAS --->>
                  fluidRow(
                    column(12, h4("Gráfica: Actividad vs Absorbancia")),
                    column(3, checkboxInput(ns("show_od1_abs"), "Réplicas OD1", value = FALSE)),
@@ -34,7 +34,7 @@ amilasaUI <- function(id) {
                  fluidRow(
                    column(6, checkboxGroupInput(ns("plotAbs_groups"), "Seleccionar Grupo(s):", choices = NULL, inline = TRUE))
                  ),
-                 plotlyOutput(ns("plotAbsorbance"), height = "400px"), # CAMBIADO a plotlyOutput
+                 plotlyOutput(ns("plotAbsorbance"), height = "400px"), 
                  hr(),
                  
                  fluidRow(
@@ -47,8 +47,8 @@ amilasaUI <- function(id) {
                  fluidRow(
                    column(6, checkboxGroupInput(ns("plotAct_groups"), "Seleccionar Grupo(s):", choices = NULL, inline = TRUE))
                  ),
-                 plotlyOutput(ns("plotActivity"), height = "400px") # CAMBIADO a plotlyOutput
-                 # <<--- FIN DE LA MODIFICACIÓN --->>
+                 plotlyOutput(ns("plotActivity"), height = "400px") 
+                 # <<--- FIN DE LAS GRAFICAS --->>
         )
       )
     )
@@ -58,7 +58,7 @@ amilasaUI <- function(id) {
 amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
   moduleServer(id, function(input, output, session) {
     
-    # --- 1, 2. CÁLCULO Y TABLAS (Código original sin cambios) ---
+    # --- CÁLCULO Y TABLAS  ---
     datos_procesados <- eventReactive(input$calcular, {
       req(input$file_datos)
       df_raw <- read.csv(input$file_datos$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
@@ -79,7 +79,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
     })
     output$resultados_tabulados_ui <- renderUI({ req(datos_procesados()); df <- datos_procesados(); grupos <- unique(df$Grupo); lapply(grupos, function(g) { df_grupo <- df %>% filter(Grupo == g) %>% select(Muestra_ID, Tiempo_fermentacion_h, OD1, OD2, U_L_1, U_L_2, Promedio_U_L, SD_U_L) %>% rename(`Muestra ID` = Muestra_ID, `Tiempo (min)` = Tiempo_fermentacion_h, `OD1 (Abs)` = OD1, `OD2 (Abs)` = OD2, `Actividad OD1 (U/L)` = U_L_1, `Actividad OD2 (U/L)` = U_L_2, `Actividad Promedio (U/L)` = Promedio_U_L, `Desviación Estándar (U/L)` = SD_U_L) %>% mutate(across(c(`Actividad Promedio (U/L)`, `Desviación Estándar (U/L)`), ~ round(., 2))); tagList(h5(paste("Resultados del grupo:", g), style = "font-weight: bold;"), renderTable(df_grupo, striped = TRUE, hover = TRUE, bordered = TRUE)) }) })
     
-    # --- 3. PARÁMETROS CINÉTICOS (con la corrección de la cadena de texto) ---
+    # --- PARÁMETROS CINÉTICOS  ---
     parametros_cineticos_por_grupo <- reactive({
       req(datos_procesados())
       df <- datos_procesados()
@@ -128,9 +128,8 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
                       
                       if (k > 0 && A_max > 0) {
                         t_half <- 1 / (k * A_max)
-                        # <<--- INICIO DE LA CORRECCIÓN --- >>
+                        
                         params_df_temp <- add_param_row(params_df_temp, "k decaimiento 2do orden (L/(U*min))", k, "%.5f")
-                        # <<--- FIN DE LA CORRECCIÓN --- >>
                         params_df_temp <- add_param_row(params_df_temp, "Vida media (t1/2) (min)", t_half)
                         params_df_temp <- add_param_row(params_df_temp, "Vida media (t1/2) (h)", t_half / 60)
                       }
@@ -150,7 +149,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
     output$parametros_cineticos_ui <- renderUI({ req(parametros_cineticos_por_grupo()); df_params <- parametros_cineticos_por_grupo(); if (nrow(df_params) == 0) { return(tags$p("No hay parámetros.")) }; grupos <- unique(df_params$Grupo); lapply(grupos, function(g) { df_grupo_params <- df_params %>% filter(Grupo == g) %>% select(-Grupo); tagList(h5(paste("Parámetros Cinéticos - Grupo", g), style = "font-weight: bold;"), tableOutput(session$ns(paste0("tabla_parametros_", g))), hr()) }) })
     observe({ req(parametros_cineticos_por_grupo()); df_params <- parametros_cineticos_por_grupo(); for (g in unique(df_params$Grupo)) { local({ grupo_local <- g; output[[paste0("tabla_parametros_", grupo_local)]] <- renderTable({ df_params %>% filter(Grupo == grupo_local) %>% select(-Grupo) }, striped = TRUE, hover = TRUE, bordered = TRUE, align = 'l') }) } })
     
-    # --- 4. GRÁFICAS DINÁMICAS (Código original sin cambios) ---
+    # --- GRÁFICAS  ---
     observeEvent(datos_procesados(), { df <- datos_procesados(); req(df); grupos_disponibles <- unique(df$Grupo); updateCheckboxGroupInput(session, "plotAbs_groups", choices = grupos_disponibles, selected = grupos_disponibles, inline = TRUE); updateCheckboxGroupInput(session, "plotAct_groups", choices = grupos_disponibles, selected = grupos_disponibles, inline = TRUE) })
     
     output$plotAbsorbance <- renderPlotly({
@@ -179,7 +178,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       fig %>% layout(title = "Evolución Temporal de la Actividad Enzimática", xaxis = list(title = "Tiempo (min)"), yaxis = list(title = "Actividad (U/L)"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
     })
     
-    # --- 5. RETURN VALUE ---
+    # --- RETURN VALUE ---
     return(reactive({
       req(datos_procesados())
       datos_procesados() %>%

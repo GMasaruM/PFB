@@ -5,7 +5,7 @@ library(tidyr)
 library(plotly)
 
 # -----------------------------------------------------------------------------
-# Interfaz de Usuario (UI) - SIN CAMBIOS
+# Interfaz de Usuario (UI)
 # -----------------------------------------------------------------------------
 etanolUI <- function(id) {
   ns <- NS(id)
@@ -58,12 +58,12 @@ etanolUI <- function(id) {
 }
 
 # -----------------------------------------------------------------------------
-# Lógica del Servidor con la corrección
+# Lógica del Servidor
 # -----------------------------------------------------------------------------
 etanolServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     
-    # --- Lógica de cálculo (sin cambios) ---
+    # --- Lógica de cálculo ---
     datos_procesados <- eventReactive(input$calcular, {
       req(input$file_datos)
       df_raw <- read.csv(input$file_datos$datapath, header = TRUE, stringsAsFactors = FALSE)
@@ -112,12 +112,12 @@ etanolServer <- function(id) {
       return(list(df_final = df_resultados, curva_calib = curva_calib, Slope = Slope, Intercept = Intercept, R_squared = R_squared))
     })
     
-    # Renderizado de tablas de resultados (sin cambios)
+    # Renderizado de tablas de resultados
     output$tablas_resultados_ui <- renderUI({ req(datos_procesados()); lapply(unique(datos_procesados()$df_final$Grupo), function(g) { ns <- session$ns; tagList(h4(paste("Resultados para el Grupo:", g)), tableOutput(ns(paste0("tabla_", g))), hr()) }) })
     observe({ req(datos_procesados()); df_final <- datos_procesados()$df_final; lapply(unique(df_final$Grupo), function(g) { output[[paste0("tabla_", g)]] <- renderTable({ df_final %>% filter(Grupo == g) %>% select(Muestra_ID, Tiempo_fermentacion, OD1, OD2, OD_promedio, OD_desv_std, Concentracion_OD1, Concentracion_OD2, Concentracion_promedio, Concentracion_desv_std) %>% rename("Muestra" = Muestra_ID, "Tiempo (min)" = Tiempo_fermentacion, "Abs. OD1" = OD1, "Abs. OD2" = OD2, "Abs. Promedio" = OD_promedio, "Desv. Estandar Abs." = OD_desv_std, "Concentracion OD1 (%)" = Concentracion_OD1, "Concentracion OD2 (%)" = Concentracion_OD2, "Concentracion Promedio (%)" = Concentracion_promedio, "Desv. estandar Conc. (%)" = Concentracion_desv_std) %>% mutate(across(where(is.numeric), ~round(., 3))) }, striped = TRUE, hover = TRUE, bordered = TRUE) }) })
     
     
-    # --- CAMBIO EN EL SERVIDOR: RENDERIZADO DE TABLAS DE PARÁMETROS ---
+    # --- TABLAS DE PARÁMETROS ---
     
     parametros_calculados <- eventReactive(input$calcular, {
       req(datos_procesados())
@@ -146,7 +146,7 @@ etanolServer <- function(id) {
       })
     })
     
-    # Renderizado de cada tabla de parámetros individualmente
+    # Tabla de parámetros individuales
     observe({
       req(parametros_calculados())
       df_parametros <- parametros_calculados()
@@ -167,7 +167,7 @@ etanolServer <- function(id) {
       }
     })
     
-    # --- Lógica de Gráficos (sin cambios) ---
+    # --- Lógica de Gráficos  ---
     output$plotCurvaCalibracion <- renderPlotly({
       req(datos_procesados())
       datos <- datos_procesados()
@@ -198,7 +198,7 @@ etanolServer <- function(id) {
       fig %>% layout(title = "Concentración de Etanol vs Tiempo", xaxis = list(title = "Tiempo (min)"), yaxis = list(title = "Concentración de Etanol (%)"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
     })
     
-    # --- Lógica de retorno para el módulo integrado (sin cambios) ---
+    # --- Lógica de retorno para el módulo integrado ---
     datos_para_integracion <- reactive({
       req(datos_procesados())
       datos_procesados()$df_final %>%
