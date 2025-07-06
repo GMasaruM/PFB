@@ -70,7 +70,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
     })
     
     # --- 2. Pestañas de Tablas y Análisis (Bloque con la corrección) ---
-    output$tablas_resultados <- renderUI({ req(datos_analizados()); lapply(unique(datos_analizados()$tabla_resultados$Grupo), function(g) { tagList(h5(paste("Resultados para el grupo:", g)), tableOutput(session$ns(paste0("tabla_res_", g))), hr()) }) })
+    output$tablas_resultados <- renderUI({ req(datos_analizados()); lapply(unique(datos_analizados()$tabla_resultados$Grupo), function(g) { tagList(h5(paste("Resultados para el Grupo", g)), tableOutput(session$ns(paste0("tabla_res_", g))), hr()) }) })
     
     observe({ 
       req(datos_analizados())
@@ -99,7 +99,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       } 
     })
     
-    output$analisis_por_grupo <- renderUI({ req(datos_analizados()); tagList(lapply(unique(datos_analizados()$muestras_sumarizado$Grupo), function(g) { tagList(h5(paste("Parámetros de Glucosa - Grupo", g)), tableOutput(session$ns(paste0("tabla_analisis_", g))), hr()) })) })
+    output$analisis_por_grupo <- renderUI({ req(datos_analizados()); tagList(lapply(unique(datos_analizados()$muestras_sumarizado$Grupo), function(g) { tagList(h5(paste("Parámetros para el Grupo", g)), tableOutput(session$ns(paste0("tabla_analisis_", g))), hr()) })) })
     observe({ req(datos_analizados()); df_sumarizado <- datos_analizados()$muestras_sumarizado; for (g in unique(df_sumarizado$Grupo)) { local({ grupo_local <- g; datos_grupo <- df_sumarizado %>% filter(Grupo == grupo_local) %>% arrange(Tiempo_fermentacion); output[[paste0("tabla_analisis_", grupo_local)]] <- renderTable({ if (nrow(datos_grupo) < 2) { return(data.frame(Parámetro = "Error", Valor = "Se necesitan al menos 2 puntos de tiempo.")) }; glucosa_inicial_medida <- datos_grupo$Glucosa_uM_mean[1]; glucosa_final_medida <- tail(datos_grupo$Glucosa_uM_mean, 1); cambio_neto_total_glucosa <- glucosa_final_medida - glucosa_inicial_medida; duracion_total <- tail(datos_grupo$Tiempo_fermentacion, 1) - datos_grupo$Tiempo_fermentacion[1]; min_glucosa_val <- min(datos_grupo$Glucosa_uM_mean, na.rm = TRUE); max_glucosa_val <- max(datos_grupo$Glucosa_uM_mean, na.rm = TRUE); time_at_max_glucosa <- datos_grupo$Tiempo_fermentacion[which.max(datos_grupo$Glucosa_uM_mean)]; glucosa_producida_inicial_a_max <- max_glucosa_val - glucosa_inicial_medida; glucosa_consumida_max_a_final <- max_glucosa_val - glucosa_final_medida; data.frame( Parámetro = c("Glucosa Inicial Media (µM)", "Glucosa Final Media (µM)", "Glucosa Mínima Observada (µM)", "Glucosa Máxima Observada (µM)", "Tiempo a la Glucosa Máxima (min)", "Glucosa Producida (Inicial a Máx) (µM)", "Glucosa Consumida (Máx a Final) (µM)", "Cambio Neto Total Glucosa (µM)", "Duración del Experimento (min)"), Valor = sprintf("%.3f", c(glucosa_inicial_medida, glucosa_final_medida, min_glucosa_val, max_glucosa_val, time_at_max_glucosa, glucosa_producida_inicial_a_max, glucosa_consumida_max_a_final, cambio_neto_total_glucosa, duracion_total)) ) }, striped = TRUE, hover = TRUE, bordered = TRUE, align = 'l') }) } })
     
     # --- 3. PESTAÑA GRÁFICOS (con controles y lógica completa, sin cambios) ---
@@ -125,8 +125,8 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
         fluidRow(
           column(3, checkboxInput(session$ns("show_mean_cons"), "Promedio", value = TRUE)),
           column(3, checkboxInput(session$ns("show_sd_cons"), "Desv. Est.", value = TRUE)),
-          column(3, checkboxInput(session$ns("show_OD1_cons"), "OD1", value = FALSE)),
-          column(3, checkboxInput(session$ns("show_OD2_cons"), "OD2", value = FALSE))
+          column(3, checkboxInput(session$ns("show_OD1_cons"), "Réplica 1", value = FALSE)),
+          column(3, checkboxInput(session$ns("show_OD2_cons"), "Réplica 2", value = FALSE))
         )
       )
     })
