@@ -286,3 +286,4 @@ etanolServer <- function(id) {
     return(datos_para_integracion)
   })
 }
+
