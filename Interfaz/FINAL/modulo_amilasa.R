@@ -162,7 +162,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       df_long <- df_plot %>% pivot_longer(c(U_L_1, U_L_2), names_to = "Replica", values_to = "Actividad")
       if (isTRUE(input$show_od1_abs)) { fig <- fig %>% add_trace(data = filter(df_long, Replica == "U_L_1"), x = ~Absorbancia_Neta, y = ~Actividad, type = 'scatter', mode = 'markers', color = ~Grupo, legendgroup = ~Grupo, name = ~paste(Grupo, "OD1"), marker = list(symbol = 'circle-open'), showlegend = FALSE, hoverinfo = 'text', text = ~paste0("<b>Muestra: ", Muestra_ID, " (OD1)</b><br>", "Abs Neta: ", round(Absorbancia_Neta, 3), "<br>", "Actividad: ", round(Actividad, 2), " U/L")) }
       if (isTRUE(input$show_od2_abs)) { fig <- fig %>% add_trace(data = filter(df_long, Replica == "U_L_2"), x = ~Absorbancia_Neta, y = ~Actividad, type = 'scatter', mode = 'markers', color = ~Grupo, legendgroup = ~Grupo, name = ~paste(Grupo, "OD2"), marker = list(symbol = 'square-open'), showlegend = FALSE, hoverinfo = 'text', text = ~paste0("<b>Muestra: ", Muestra_ID, " (OD2)</b><br>", "Abs Neta: ", round(Absorbancia_Neta, 3), "<br>", "Actividad: ", round(Actividad, 2), " U/L")) }
-      fig %>% layout(title = "Actividad Enzimática vs. Absorbancia", xaxis = list(title = "Absorbancia Neta (OD muestra - OD blanco)"), yaxis = list(title = "Actividad (U/L)"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
+      fig %>% layout(title = "Actividad Enzimática vs. Absorbancia", xaxis = list(title = "Absorbancia Correguida"), yaxis = list(title = "Actividad Calculada (U/L)"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
     })
     
     output$plotActivity <- renderPlotly({
@@ -175,7 +175,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       df_long <- df_plot %>% pivot_longer(c(U_L_1, U_L_2), names_to = "Replica", values_to = "Actividad")
       if (isTRUE(input$show_od1_time)) { fig <- fig %>% add_trace(data = filter(df_long, Replica == "U_L_1"), x = ~Tiempo_fermentacion, y = ~Actividad, type = 'scatter', mode = 'markers', color = ~Grupo, legendgroup = ~Grupo, name = ~paste(Grupo, "OD1"), marker = list(symbol = 'circle-open'), showlegend = FALSE, hoverinfo = 'text', text = ~paste0("<b>Muestra: ", Muestra_ID, " (OD1)</b><br>", "Tiempo: ", Tiempo_fermentacion, " min<br>", "Actividad: ", round(Actividad, 2), " U/L")) }
       if (isTRUE(input$show_od2_time)) { fig <- fig %>% add_trace(data = filter(df_long, Replica == "U_L_2"), x = ~Tiempo_fermentacion, y = ~Actividad, type = 'scatter', mode = 'markers', color = ~Grupo, legendgroup = ~Grupo, name = ~paste(Grupo, "OD2"), marker = list(symbol = 'square-open'), showlegend = FALSE, hoverinfo = 'text', text = ~paste0("<b>Muestra: ", Muestra_ID, " (OD2)</b><br>", "Tiempo: ", Tiempo_fermentacion, " min<br>", "Actividad: ", round(Actividad, 2), " U/L")) }
-      fig %>% layout(title = "Evolución Temporal de la Actividad Enzimática", xaxis = list(title = "Tiempo (min)"), yaxis = list(title = "Actividad (U/L)"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
+      fig %>% layout(title = "Evolución Temporal de la Actividad Enzimática", xaxis = list(title = "Tiempo (min)"), yaxis = list(title = "Actividad de amilasa (U/L)"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
     })
     
     # --- RETURN VALUE ---
