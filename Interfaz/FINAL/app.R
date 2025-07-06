@@ -13,6 +13,8 @@ library(ggplot2)
 library(patchwork)
 
 
+
+
 # --- Cargar los archivos de los módulos ---
 source("modulo_glucosa.R")
 source("modulo_amilasa.R")
