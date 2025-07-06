@@ -47,8 +47,8 @@ etanolUI <- function(id) {
                  fluidRow(
                    column(3, checkboxInput(ns("show_prom_conc"), "Promedio", value = TRUE)),
                    column(3, checkboxInput(ns("show_desv_conc"), "Desv. Est.", value = TRUE)),
-                   column(3, checkboxInput(ns("show_od1_conc"), "Réplicas OD1", value = FALSE)),
-                   column(3, checkboxInput(ns("show_od2_conc"), "Réplicas OD2", value = FALSE))
+                   column(3, checkboxInput(ns("show_od1_conc"), "Réplica OD1", value = FALSE)),
+                   column(3, checkboxInput(ns("show_od2_conc"), "Réplica OD2", value = FALSE))
                  ),
                  plotlyOutput(ns("plotConcentracionEtanolTiempo"))
         )

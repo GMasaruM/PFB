@@ -21,31 +21,31 @@ amilasaUI <- function(id) {
         id = ns("tabs"),
         
         tabPanel("Resultados Tabulados", uiOutput(ns("resultados_tabulados_ui"))),
-        tabPanel("Parámetros Cinéticos", h4("Parámetros Cinéticos Estimados por Grupo"), uiOutput(ns("parametros_cineticos_ui"))),
+        tabPanel("Parámetros Cinéticos", uiOutput(ns("parametros_cineticos_ui"))),
         tabPanel("Gráficas",
                  # <<--- GRAFICAS --->>
                  fluidRow(
-                   column(12, h4("Gráfica: Actividad vs Absorbancia")),
-                   column(3, checkboxInput(ns("show_od1_abs"), "Réplicas OD1", value = FALSE)),
-                   column(3, checkboxInput(ns("show_od2_abs"), "Réplicas OD2", value = FALSE)),
+                   column(12, h4("Actividad de amilasa vs. Absorbancia")),
+                   column(3, checkboxInput(ns("show_od1_abs"), "OD1", value = FALSE)),
+                   column(3, checkboxInput(ns("show_od2_abs"), "OD2", value = FALSE)),
                    column(3, checkboxInput(ns("show_avg_abs"), "Promedios", value = TRUE)),
                    column(3, checkboxInput(ns("show_sd_abs"), "Desv. Est.", value = TRUE))
                  ),
                  fluidRow(
-                   column(6, checkboxGroupInput(ns("plotAbs_groups"), "Seleccionar Grupo(s):", choices = NULL, inline = TRUE))
+                   column(6, checkboxGroupInput(ns("plotAbs_groups"), label = NULL, choices = NULL, inline = TRUE))
                  ),
                  plotlyOutput(ns("plotAbsorbance"), height = "400px"), 
                  hr(),
                  
                  fluidRow(
-                   column(12, h4("Gráfica: Actividad vs Tiempo")),
-                   column(3, checkboxInput(ns("show_od1_time"), "Réplicas OD1", value = FALSE)),
-                   column(3, checkboxInput(ns("show_od2_time"), "Réplicas OD2", value = FALSE)),
+                   column(12, h4("Actividad de amilasa vs. Tiempo")),
+                   column(3, checkboxInput(ns("show_od1_time"), "Réplica 1", value = FALSE)),
+                   column(3, checkboxInput(ns("show_od2_time"), "Réplica 2", value = FALSE)),
                    column(3, checkboxInput(ns("show_avg_time"), "Promedios", value = TRUE)),
                    column(3, checkboxInput(ns("show_sd_time"), "Desv. Est.", value = TRUE))
                  ),
                  fluidRow(
-                   column(6, checkboxGroupInput(ns("plotAct_groups"), "Seleccionar Grupo(s):", choices = NULL, inline = TRUE))
+                   column(6, checkboxGroupInput(ns("plotAct_groups"), label = NULL, choices = NULL, inline = TRUE))
                  ),
                  plotlyOutput(ns("plotActivity"), height = "400px") 
                  # <<--- FIN DE LAS GRAFICAS --->>
@@ -74,10 +74,10 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       df_muestras <- df_raw %>% filter(Tipo == "Muestra")
       validate(need(nrow(df_muestras) > 0, "No se encontraron filas con Tipo 'Muestra'."))
       calc_act <- function(OD_muestra) { pmax(0, ((OD_muestra - OD_blanco_promedio) / (OD_estandar_promedio - OD_blanco_promedio)) * (400 / input$T) * input$DF) }
-      df_final <- df_muestras %>% mutate(Grupo = str_extract(Muestra_ID, "^[A-Za-z]+")) %>% mutate(U_L_1 = calc_act(OD1), U_L_2 = calc_act(OD2)) %>% rowwise() %>% mutate(Promedio_U_L = mean(c(U_L_1, U_L_2), na.rm = TRUE), SD_U_L = sd(c(U_L_1, U_L_2), na.rm = TRUE), Absorbancia_Neta = mean(c(OD1, OD2), na.rm = TRUE) - OD_blanco_promedio) %>% ungroup() %>% mutate(SD_U_L = ifelse(is.na(SD_U_L), 0, SD_U_L), Tiempo_fermentacion_h = Tiempo_fermentacion / 60) %>% arrange(Grupo, Tiempo_fermentacion)
+      df_final <- df_muestras %>% mutate(Grupo = str_extract(Muestra_ID, "^[A-Za-z]+")) %>% mutate(U_L_1 = calc_act(OD1), U_L_2 = calc_act(OD2)) %>% rowwise() %>% mutate(Promedio_U_L = mean(c(U_L_1, U_L_2), na.rm = TRUE), SD_U_L = sd(c(U_L_1, U_L_2), na.rm = TRUE), Absorbancia_Neta = mean(c(OD1, OD2), na.rm = TRUE) - OD_blanco_promedio) %>% ungroup() %>% mutate(SD_U_L = ifelse(is.na(SD_U_L), 0, SD_U_L), Tiempo_fermenta = Tiempo_fermentacion) %>% arrange(Grupo, Tiempo_fermentacion)
       return(df_final)
     })
-    output$resultados_tabulados_ui <- renderUI({ req(datos_procesados()); df <- datos_procesados(); grupos <- unique(df$Grupo); lapply(grupos, function(g) { df_grupo <- df %>% filter(Grupo == g) %>% select(Muestra_ID, Tiempo_fermentacion_h, OD1, OD2, U_L_1, U_L_2, Promedio_U_L, SD_U_L) %>% rename(`Muestra ID` = Muestra_ID, `Tiempo (min)` = Tiempo_fermentacion_h, `OD1 (Abs)` = OD1, `OD2 (Abs)` = OD2, `Actividad OD1 (U/L)` = U_L_1, `Actividad OD2 (U/L)` = U_L_2, `Actividad Promedio (U/L)` = Promedio_U_L, `Desviación Estándar (U/L)` = SD_U_L) %>% mutate(across(c(`Actividad Promedio (U/L)`, `Desviación Estándar (U/L)`), ~ round(., 2))); tagList(h5(paste("Resultados del grupo:", g), style = "font-weight: bold;"), renderTable(df_grupo, striped = TRUE, hover = TRUE, bordered = TRUE)) }) })
+    output$resultados_tabulados_ui <- renderUI({ req(datos_procesados()); df <- datos_procesados(); grupos <- unique(df$Grupo); lapply(grupos, function(g) { df_grupo <- df %>% filter(Grupo == g) %>% select(Muestra_ID, Tiempo_fermentacion, OD1, OD2, U_L_1, U_L_2, Promedio_U_L, SD_U_L) %>% rename(`Muestra ID` = Muestra_ID, `Tiempo (min)` = Tiempo_fermentacion, `Abs. OD1` = OD1, `Abs. OD2` = OD2, `Act. α-amilasa 1 (U/L)` = U_L_1, `Act. α-amilasa 2 (U/L)` = U_L_2, `Act. α-amilasa Promedio (U/L)` = Promedio_U_L, `Desv. Est. (U/L)` = SD_U_L) %>% mutate(across(c(`Act. α-amilasa Promedio (U/L)`, `Desv. Est. (U/L)`), ~ round(., 2))); tagList(h5(paste("Resultados para el Grupo", g), style = "font-weight: bold;"), renderTable(df_grupo, striped = TRUE, hover = TRUE, bordered = TRUE)) }) })
     
     # --- PARÁMETROS CINÉTICOS  ---
     parametros_cineticos_por_grupo <- reactive({
@@ -146,7 +146,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       return(all_params_df)
     })
     
-    output$parametros_cineticos_ui <- renderUI({ req(parametros_cineticos_por_grupo()); df_params <- parametros_cineticos_por_grupo(); if (nrow(df_params) == 0) { return(tags$p("No hay parámetros.")) }; grupos <- unique(df_params$Grupo); lapply(grupos, function(g) { df_grupo_params <- df_params %>% filter(Grupo == g) %>% select(-Grupo); tagList(h5(paste("Parámetros Cinéticos - Grupo", g), style = "font-weight: bold;"), tableOutput(session$ns(paste0("tabla_parametros_", g))), hr()) }) })
+    output$parametros_cineticos_ui <- renderUI({ req(parametros_cineticos_por_grupo()); df_params <- parametros_cineticos_por_grupo(); if (nrow(df_params) == 0) { return(tags$p("No hay parámetros.")) }; grupos <- unique(df_params$Grupo); lapply(grupos, function(g) { df_grupo_params <- df_params %>% filter(Grupo == g) %>% select(-Grupo); tagList(h5(paste("Parámetros para el Grupo", g), style = "font-weight: bold;"), tableOutput(session$ns(paste0("tabla_parametros_", g))), hr()) }) })
     observe({ req(parametros_cineticos_por_grupo()); df_params <- parametros_cineticos_por_grupo(); for (g in unique(df_params$Grupo)) { local({ grupo_local <- g; output[[paste0("tabla_parametros_", grupo_local)]] <- renderTable({ df_params %>% filter(Grupo == grupo_local) %>% select(-Grupo) }, striped = TRUE, hover = TRUE, bordered = TRUE, align = 'l') }) } })
     
     # --- GRÁFICAS  ---
@@ -162,7 +162,7 @@ amilasaServer <- function(id, datos_crudos_r = reactive(NULL)) {
       df_long <- df_plot %>% pivot_longer(c(U_L_1, U_L_2), names_to = "Replica", values_to = "Actividad")
       if (isTRUE(input$show_od1_abs)) { fig <- fig %>% add_trace(data = filter(df_long, Replica == "U_L_1"), x = ~Absorbancia_Neta, y = ~Actividad, type = 'scatter', mode = 'markers', color = ~Grupo, legendgroup = ~Grupo, name = ~paste(Grupo, "OD1"), marker = list(symbol = 'circle-open'), showlegend = FALSE, hoverinfo = 'text', text = ~paste0("<b>Muestra: ", Muestra_ID, " (OD1)</b><br>", "Abs Neta: ", round(Absorbancia_Neta, 3), "<br>", "Actividad: ", round(Actividad, 2), " U/L")) }
       if (isTRUE(input$show_od2_abs)) { fig <- fig %>% add_trace(data = filter(df_long, Replica == "U_L_2"), x = ~Absorbancia_Neta, y = ~Actividad, type = 'scatter', mode = 'markers', color = ~Grupo, legendgroup = ~Grupo, name = ~paste(Grupo, "OD2"), marker = list(symbol = 'square-open'), showlegend = FALSE, hoverinfo = 'text', text = ~paste0("<b>Muestra: ", Muestra_ID, " (OD2)</b><br>", "Abs Neta: ", round(Absorbancia_Neta, 3), "<br>", "Actividad: ", round(Actividad, 2), " U/L")) }
-      fig %>% layout(title = "Actividad Enzimática vs Absorbancia Neta", xaxis = list(title = "Absorbancia Neta (OD muestra - OD blanco)"), yaxis = list(title = "Actividad (U/L)"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
+      fig %>% layout(title = "Actividad Enzimática vs. Absorbancia", xaxis = list(title = "Absorbancia Neta (OD muestra - OD blanco)"), yaxis = list(title = "Actividad (U/L)"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
     })
     
     output$plotActivity <- renderPlotly({

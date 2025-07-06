@@ -23,7 +23,7 @@ glucosaUI <- function(id) {
                  h4("Curva de Calibración"),
                  plotlyOutput(ns("plot_calibracion")),
                  hr(),
-                 h4("Absorbancia vs. Concentración de Glucosa"),
+                 h4("Concentración de Glucosa vs. Absorbancia"),
                  uiOutput(ns("diagnostic_controls_ui")), 
                  plotlyOutput(ns("plot_diagnostico_muestras")),
                  hr(),
@@ -85,8 +85,8 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
               select(
                 `Muestra ID` = ID,
                 `Tiempo (min)` = Tiempo,
-                `Abs. OD1 Corregida` = OD1_corregida,
-                `Abs. OD2 Corregida` = OD2_corregida,
+                `Abs. OD1` = OD1,
+                `Abs. OD2` = OD2,
                 `Conc. Glucosa 1 (µM)` = Glucosa_uM_OD1,
                 `Conc. Glucosa 2 (µM)` = Glucosa_uM_OD2,
                 `Conc. Glucosa Promedio (µM)` = Glucosa_uM_mean,
@@ -151,7 +151,7 @@ glucosaServer <- function(id, datos_crudos_r = reactive(NULL)) {
         df_od2 <- filter(df_long, replica == "OD2")
         fig <- fig %>% add_trace(data = df_od2, x = ~OD_corregida, y = ~Glucosa_uM, type = 'scatter', mode = 'markers', color = ~Grupo, legendgroup = ~Grupo, name = ~paste(Grupo, "OD2"), marker = list(symbol = 'square'), showlegend = FALSE, hoverinfo = 'text', text = ~paste("Muestra:", Muestra_ID))
       }
-      fig %>% layout(title = "Relación Absorbancia vs. Concentración", xaxis = list(title = "Absorbancia Corregida"), yaxis = list(title = "Glucosa Calculada (µM)"), legend = list(title = list(text = 'Grupo')))
+      fig %>% layout(title = "Concentración vs. Absorbancia", xaxis = list(title = "Absorbancia Corregida"), yaxis = list(title = "Glucosa Calculada (µM)"), legend = list(title = list(text = 'Grupo')))
     })
     
     output$plot_consumo_con_sd <- renderPlotly({
