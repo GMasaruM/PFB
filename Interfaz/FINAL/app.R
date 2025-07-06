@@ -1,6 +1,6 @@
 # app.R
 
-# --- Cargar librerías principales ---
+# --- Cargar librerías ---
 library(shiny)
 library(bslib)
 library(dplyr)
@@ -48,7 +48,7 @@ server <- function(input, output, session) {
   )
 }
 
-# --- Ejecutar la aplicación ---
+# --- Ejecucion ---
 shinyApp(ui, server)
 
 
