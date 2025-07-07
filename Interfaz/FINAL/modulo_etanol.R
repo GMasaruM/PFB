@@ -17,6 +17,9 @@ etanolUI <- function(id) {
       h4("2. Parámetros de Cálculo"),
       numericInput(ns("DF"), "Factor de dilución (DF):", value = 50, min = 1, step = 1),
       numericInput(ns("cantidad_sustrato"), "Cantidad de Sustrato Utilizado (g):", value = 1000, min = 1, step = 1),
+    
+      numericInput(ns("volumen_final"), "Volumen Final de Producción (mL):", value = 1000, min = 1, step = 1),
+      
       hr(),
       actionButton(ns("calcular"), "Calcular y Graficar", class = "btn-primary", icon = icon("cogs"))
     ),
@@ -58,14 +61,13 @@ etanolUI <- function(id) {
 etanolServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     
-    # --- Lógica de cálculo centralizada y robusta ---
+
     datos_procesados <- eventReactive(input$calcular, {
       req(input$file_datos)
       df_raw <- tryCatch(read.csv(input$file_datos$datapath, header = TRUE, stringsAsFactors = FALSE, check.names = FALSE), error = function(e) validate("No se pudo leer el archivo CSV."))
       cols_requeridas <- c("Tipo", "Muestra_ID", "Tiempo_fermentacion", "concentracion_etanol", "OD1", "OD2")
       validate(need(all(cols_requeridas %in% names(df_raw)), paste("Error: Faltan columnas. Se requieren:", paste(cols_requeridas, collapse = ", "))))
       
-      # 1. Unificar Estándares y Blancos en un solo dataframe de calibración
       df_calibracion_para_modelo <- df_raw %>%
         filter(Tipo %in% c("Estandar", "Blanco")) %>%
         mutate(
@@ -74,18 +76,15 @@ etanolServer <- function(id) {
       
       validate(need(nrow(df_calibracion_para_modelo) > 0, "Error: No se encontraron 'Blancos' o 'Estandares' en el archivo."))
       
-      # 2. Pivotar para tener todos los puntos de calibración individuales
       calibracion_long <- df_calibracion_para_modelo %>%
         pivot_longer(cols = c(OD1, OD2), names_to = "Replica", values_to = "OD")
       
-      # 3. Ajustar el modelo lineal a todos los puntos
       validate(need(nrow(calibracion_long) >= 4, "Se necesitan al menos 2 estándares (4 puntos de datos) para la regresión."))
       modelo_calib <- lm(OD ~ concentracion_etanol, data = calibracion_long)
       Slope <- coef(modelo_calib)["concentracion_etanol"]
       Intercept <- coef(modelo_calib)["(Intercept)"]
       R_squared <- summary(modelo_calib)$r.squared
       
-      # 4. Calcular concentraciones en las muestras
       muestras <- df_raw %>% filter(Tipo == "Muestra")
       validate(need(nrow(muestras) > 0, "Error: No se encontraron 'Muestras' en el archivo."))
       
@@ -107,7 +106,6 @@ etanolServer <- function(id) {
       
       validate(need(length(unique(df_resultados$Grupo)) > 0, "No se pudo identificar ningún grupo a partir de los prefijos de Muestra_ID."))
       
-      # Preparar datos promediados para el gráfico de calibración
       curva_calib_promedios <- calibracion_long %>%
         group_by(concentracion_etanol) %>%
         summarise(OD_promedio = mean(OD, na.rm = TRUE), .groups = 'drop')
@@ -122,11 +120,10 @@ etanolServer <- function(id) {
       ))
     })
     
-    # --- RENDERIZADO DE TABLAS DE RESULTADOS ---
+    
     output$tablas_resultados_ui <- renderUI({ req(datos_procesados()); lapply(unique(datos_procesados()$df_final$Grupo), function(g) { ns <- session$ns; tagList(h4(paste("Resultados para el Grupo", g)), tableOutput(ns(paste0("tabla_", g))), hr()) }) })
     observe({ req(datos_procesados()); df_final <- datos_procesados()$df_final; lapply(unique(df_final$Grupo), function(g) { output[[paste0("tabla_", g)]] <- renderTable({ df_final %>% filter(Grupo == g) %>% select(Muestra_ID, Tiempo_fermentacion, OD1, OD2, OD_promedio, OD_desv_std, Concentracion_OD1, Concentracion_OD2, Concentracion_promedio, Concentracion_desv_std) %>% rename("Muestra ID" = Muestra_ID, "Tiempo (min)" = Tiempo_fermentacion, "Abs. OD1" = OD1, "Abs. OD2" = OD2, "Abs. Promedio" = OD_promedio, "Desv. Est." = OD_desv_std, "Conc. Etanol 1 (%)" = Concentracion_OD1, "Conc. Etanol 2 (%)" = Concentracion_OD2, "Conc. Etanol Promedio (%)" = Concentracion_promedio, "Desv. Est. (%)" = Concentracion_desv_std) %>% mutate(across(where(is.numeric), ~round(., 3))) }, striped = TRUE, hover = TRUE, bordered = TRUE) }) })
     
-    # --- CÁLCULO Y PRESENTACIÓN DE PARÁMETROS CINÉTICOS (LÓGICA ACTUALIZADA) ---
     parametros_calculados <- eventReactive(input$calcular, {
       req(datos_procesados())
       datos <- datos_procesados()$df_final
@@ -137,34 +134,31 @@ etanolServer <- function(id) {
           `Concentración Máxima (% v/v)` = max(Concentracion_promedio, na.rm = TRUE),
           
           `Tiempo Óptimo (min)` = {
-            # Se requieren al menos 3 puntos para un ajuste cuadrático
             if(n() >= 3) {
               modelo_q <- lm(Concentracion_promedio ~ poly(Tiempo_fermentacion, 2, raw = TRUE), data = cur_data())
               coefs <- coef(modelo_q)
-              # El vértice (-b/2a) se calcula solo si la parábola es cóncava hacia abajo (a < 0)
               if (length(coefs) >= 3 && !is.na(coefs[3]) && coefs[3] < 0) {
                 -coefs[2] / (2 * coefs[3])
               } else {
-                # Fallback: si no es parábola adecuada, se usa el tiempo del máximo observado
                 Tiempo_fermentacion[which.max(Concentracion_promedio)]
               }
             } else {
-              # Fallback: si no hay puntos suficientes, se usa el máximo observado
               Tiempo_fermentacion[which.max(Concentracion_promedio)]
             }
           },
           
           `Rendimiento (% g/g)` = {
-            # Se asume un volumen final de fermentación de 1000 mL (1 L)
-            # g etanol = (Conc %v/v / 100) * Volumen (mL) * Densidad (g/mL)
             max_conc <- max(Concentracion_promedio, na.rm = TRUE)
-            g_etanol <- (max_conc / 100) * 1000 * 0.789 # Densidad etanol ~0.789 g/mL
-            # Rendimiento % = (g etanol / g sustrato) * 100
+            
+        
+            g_etanol <- (max_conc / 100) * input$volumen_final * 0.789 # Densidad etanol ~0.789 g/mL
+            
             (g_etanol / input$cantidad_sustrato) * 100
           },
           .groups = "drop"
         )
     })
+    
     
     output$parametros_ui <- renderUI({
       req(parametros_calculados())
@@ -189,7 +183,6 @@ etanolServer <- function(id) {
             df_parametros %>%
               filter(Grupo == grupo_actual) %>%
               select(-Grupo) %>%
-              # Pivotar para tener formato de una fila por parámetro
               pivot_longer(everything(), names_to = "Parámetro Cinético", values_to = "Valor") %>%
               mutate(Valor = sprintf("%.4f", as.numeric(Valor)))
           }, striped = TRUE, hover = TRUE, bordered = TRUE, width = "100%", align = 'l')
@@ -197,7 +190,6 @@ etanolServer <- function(id) {
       }
     })
     
-    # --- GRÁFICO DE CURVA DE CALIBRACIÓN ---
     output$plotCurvaCalibracion <- renderPlotly({
       req(datos_procesados())
       datos <- datos_procesados()
@@ -227,7 +219,6 @@ etanolServer <- function(id) {
         config(displaylogo = FALSE)
     })
     
-    # --- OTROS GRÁFICOS ---
     output$plotAbsorbanciaMuestras <- renderPlotly({
       req(datos_procesados())
       df_plot <- datos_procesados()$df_final %>% arrange(Grupo, Concentracion_promedio)
@@ -250,7 +241,6 @@ etanolServer <- function(id) {
       fig %>% layout(title = "Concentración de Etanol Durante la Fermentación", xaxis = list(title = "Tiempo (min)"), yaxis = list(title = "Concentración de Etanol (%)", rangemode="tozero"), legend = list(title = list(text = 'Grupo'))) %>% config(displaylogo = FALSE)
     })
     
-    # --- Lógica de retorno para el módulo integrado ---
     return(reactive({
       req(datos_procesados())
       datos_procesados()$df_final %>%
